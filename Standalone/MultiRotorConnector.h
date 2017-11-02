@@ -59,6 +59,11 @@ private:
   std::unique_ptr<msr::airlib::DroneApi> controllerCanceable;
   std::unique_ptr<msr::airlib::ControlServerBase> rpclibServer;
 
+  float timeToLog = 0.f;
+
+  std::chrono::steady_clock::time_point rcDataPrev = std::chrono::steady_clock::now();
+  msr::airlib::RCData rcData;
+
 
   std::unique_ptr<msr::airlib::Environment> environment;
   msr::airlib::MultiRotor vehicle;

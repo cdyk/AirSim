@@ -1,4 +1,5 @@
 #include "stdafx.h"
+#include <conio.h>
 
 #include "MultiRotorConnector.h"
 
@@ -25,21 +26,65 @@ MultiRotorConnector::MultiRotorConnector(msr::airlib::MultiRotorParams* vehicle_
 
 void MultiRotorConnector::updateRenderedState()
 {
+  auto curr = std::chrono::steady_clock::now();
+  std::chrono::duration<float> step = std::chrono::duration_cast<std::chrono::milliseconds>(curr - rcDataPrev);
+  rcDataPrev = curr;
+
+  auto l = std::exp(-10.f*step.count());
+  rcData.yaw *= l;
+  rcData.pitch *= l;
+  rcData.throttle *= l;
+
+  if (std::abs(rcData.yaw) < 0.01f) rcData.yaw = 0.f;
+  if (std::abs(rcData.pitch) < 0.01f) rcData.pitch = 0.f;
+  if (std::abs(rcData.throttle) < 0.01f) rcData.throttle = 0.f;
+
+
+  rcData.is_valid = true;
+  while (_kbhit()) {
+    auto k = getch();
+    switch (k) {
+    case 'w':
+      rcData.yaw = -1.f;
+      break;
+    case 'a':
+      rcData.pitch = -1.f;
+      break;
+    case 's':
+      rcData.pitch = -1.f;
+      break;
+    case 'd':
+      rcData.yaw = 1.f;
+      break;
+    case 'z':
+      rcData.throttle = 1.f;
+      break;
+    case 'x':
+      rcData.throttle = -1.f;
+      break;
+    }
+  }
+  controller->setRCData(rcData);
 }
 
 void MultiRotorConnector::updateRendering(float dt)
 {
-#if 1
-  std::cerr
-    << "pos=["
-    << vehicle.getPose().position[0] << ", "
-    << vehicle.getPose().position[1] << ", "
-    << vehicle.getPose().position[2] << "], out=["
-    << vehicle.getRotorOutput(0).thrust << ", "
-    << vehicle.getRotorOutput(1).thrust << ", "
-    << vehicle.getRotorOutput(2).thrust << ", "
-    << vehicle.getRotorOutput(3).thrust << "]\n";
-#endif
+  timeToLog -= dt;
+  if (timeToLog <= 0.f) {
+    std::cerr
+      << "pos=["
+      << vehicle.getPose().position[0] << ", "
+      << vehicle.getPose().position[1] << ", "
+      << vehicle.getPose().position[2] << "], out=["
+      << vehicle.getRotorOutput(0).thrust << ", "
+      << vehicle.getRotorOutput(1).thrust << ", "
+      << vehicle.getRotorOutput(2).thrust << ", "
+      << vehicle.getRotorOutput(3).thrust << "], "
+      << rcData.yaw << ", "
+      << rcData.pitch << ", "
+      << rcData.throttle << "\n";
+      timeToLog = 0.5f;
+  }
 }
 
 void MultiRotorConnector::startApiServer()
