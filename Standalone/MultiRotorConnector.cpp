@@ -22,6 +22,8 @@ MultiRotorConnector::MultiRotorConnector(msr::airlib::MultiRotorParams* vehicle_
   assert(environment);
 
   controller = vehicle.getController();
+
+  cameraConnector = std::make_unique<VehicleCameraConnector>();
 }
 
 void MultiRotorConnector::updateRenderedState()
@@ -118,7 +120,7 @@ msr::airlib::VehicleControllerBase* MultiRotorConnector::getController()
 
 msr::airlib::VehicleCameraBase* MultiRotorConnector::getCamera(unsigned int index)
 {
-  return nullptr;  // return cameraConnector.
+  return cameraConnector.get();
 }
 
 void MultiRotorConnector::setPose(const msr::airlib::Pose& pose, bool ignoreCollision)

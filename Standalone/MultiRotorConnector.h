@@ -4,6 +4,8 @@
 #include <controllers/VehicleConnectorBase.hpp>
 #include <vehicles/multirotor/MultiRotor.hpp>
 
+#include "VehicleCameraConnector.h"
+
 namespace msr {
   namespace airlib {
     class MultiRotorParams;
@@ -64,6 +66,7 @@ private:
   std::chrono::steady_clock::time_point rcDataPrev = std::chrono::steady_clock::now();
   msr::airlib::RCData rcData;
 
+  std::unique_ptr<VehicleCameraConnector> cameraConnector;  // Connector to FPV camera.
 
   std::unique_ptr<msr::airlib::Environment> environment;
   msr::airlib::MultiRotor vehicle;

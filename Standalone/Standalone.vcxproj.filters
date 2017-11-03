@@ -27,6 +27,9 @@
     <ClInclude Include="AirSimRunner.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="VehicleCameraConnector.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -39,6 +42,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AirSimRunner.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VehicleCameraConnector.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

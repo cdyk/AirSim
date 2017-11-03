@@ -151,6 +151,7 @@
     <ClInclude Include="MultiRotorConnector.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="VehicleCameraConnector.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AirSimRunner.cpp" />
@@ -162,6 +163,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="VehicleCameraConnector.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AirLib\AirLib.vcxproj">
