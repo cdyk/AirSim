@@ -60,6 +60,7 @@ private:
 
 
 /************************************************** Implementation ***************************************************************/
+#ifndef AIRSIM_NO_IMPL
 
 Firmware::Firmware(Board* _board, CommLink* _comm_link)
     : board(_board), comm_link(_comm_link)
@@ -130,7 +131,7 @@ void Firmware::loop()
     mux.mux_inputs(); // 6 | 1 | 1
 }
 
-
+#endif
 
 } //namespace
 

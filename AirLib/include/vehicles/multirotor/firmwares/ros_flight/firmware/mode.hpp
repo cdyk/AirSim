@@ -41,7 +41,7 @@ private:
     uint32_t time_sticks_have_been_in_arming_position = 0; //check_mode
 };
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 void Mode::init(Board* _board, CommLink* _comm_link, CommonState* _common_state, Sensors* _sensors, RC* _rc, Params* _params)
 {
@@ -207,6 +207,6 @@ bool Mode::check_mode(uint64_t now)
     return true;
 }
 
-
+#endif
 
 } //namespace

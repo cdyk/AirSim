@@ -71,7 +71,7 @@ private:
 
 
 /************************************************** Implementation ***************************************************************/
-
+#ifndef AIRSIM_NO_IMPL
 
 void Estimator::init(Params* _params, bool use_matrix_exponential, bool use_quadratic_integration, bool use_accelerometer)
 {
@@ -287,6 +287,6 @@ void Estimator::run_estimator(const vector_t& accel, const vector_t& gyro, const
     _current_state.omega = vector_sub(_gyro_LPF, b);
 }
 
-
+#endif
 
 } //namespace

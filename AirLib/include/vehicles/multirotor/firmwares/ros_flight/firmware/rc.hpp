@@ -53,6 +53,7 @@ private:
 
 
 /************************************************** Implementation ***************************************************************/
+#ifndef AIRSIM_NO_IMPL
 
 void RC::init(CommonState* _common_state, Board* _board, Mux* _mux, Params* _params, CommLink* _comm_link)
 {
@@ -343,7 +344,7 @@ void RC::calibrate_rc()
     _calibrate_rc = false;
 }
 
-
+#endif
 
 } //namespace
 #endif

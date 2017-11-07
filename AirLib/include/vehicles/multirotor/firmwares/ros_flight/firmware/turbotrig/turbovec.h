@@ -79,7 +79,7 @@ float fsign(float y);
 
 
 /************************************************** Implementation ***************************************************************/
-
+#ifndef AIRSIM_NO_IMPL
 
 //void pfquat() __attribute__ ((unused));
 void pfquat(){}
@@ -341,6 +341,7 @@ int32_t sat(int32_t value, int32_t max)
     return value;
 }
 
+#endif
 
 #ifdef __GNUC__
 _Pragma("GCC diagnostic pop")          

@@ -64,6 +64,8 @@ private:
 
 
 /************************************************** Implementation ***************************************************************/
+#ifndef AIRSIM_NO_IMPL
+
 void Mux::init(CommonState* _common_state, Board* _board, Params* _params)
 {
     params = _params;
@@ -186,6 +188,6 @@ bool Mux::mux_inputs()
     return true;
 }
 
-
+#endif
 
 } //namespace

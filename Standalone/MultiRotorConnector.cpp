@@ -1,3 +1,4 @@
+#define AIRSIM_NO_IMPL
 #include "stdafx.h"
 #include <conio.h>
 

@@ -303,7 +303,7 @@ private:
 
 
 /************************************************** Implementation ***************************************************************/
-
+#ifndef AIRSIM_NO_IMPL
 
 // function definitions
 void Params::init(Board* _board, CommLink* _comm_link)
@@ -643,5 +643,6 @@ bool Params::set_param_by_name_float(const char name[PARAMS_NAME_LENGTH], float 
     return set_param_by_name_int(name, *(int32_t *)&value);
 }
 
+#endif
 
 } //namespace

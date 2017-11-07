@@ -84,7 +84,7 @@ private:
 
 
 /************************************************** Implementation ***************************************************************/
-
+#ifndef AIRSIM_NO_IMPL
 
 void Sensors::init(CommonState* _common_state, Board* _board, Estimator* _estimator, Params* _params, CommLink* _comm_link)
 {
@@ -369,6 +369,6 @@ void Sensors::correct_imu(void)
     _gyro.z -= params->get_param_float(Params::PARAM_GYRO_Z_BIAS);
 }
 
-
+#endif
 
 } //namespace

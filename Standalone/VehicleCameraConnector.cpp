@@ -1,3 +1,4 @@
+#define AIRSIM_NO_IMPL
 #include "VehicleCameraConnector.h"
 
 
