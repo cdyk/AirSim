@@ -58,12 +58,21 @@ public:
     virtual bool simSetSegmentationObjectID(const std::string& mesh_name, int object_id, 
         bool is_name_regex = false) override
     {
-        return UAirBlueprintLib::SetMeshStencilID(mesh_name, object_id, is_name_regex);
+        bool success;
+        UAirBlueprintLib::RunCommandOnGameThread([mesh_name, object_id, is_name_regex, &success]() {
+            success = UAirBlueprintLib::SetMeshStencilID(mesh_name, object_id, is_name_regex);
+        }, true);
+        return success;
     }
     
     virtual int simGetSegmentationObjectID(const std::string& mesh_name) override
     {
         return UAirBlueprintLib::GetMeshStencilID(mesh_name);
+    }
+
+    virtual msr::airlib::CollisionInfo getCollisionInfo() override
+    {
+        return car_pawn_->getVehiclePawnWrapper()->getCollisionInfo();
     }
 
     virtual std::vector<uint8_t> simGetImage(uint8_t camera_id, VehicleCameraBase::ImageType image_type) override
@@ -95,12 +104,12 @@ public:
     virtual CarApiBase::CarState getCarState() override
     {
         CarApiBase::CarState state(
-            car_pawn_->GetVehicleMovement()->GetForwardSpeed(),
+            car_pawn_->GetVehicleMovement()->GetForwardSpeed() / 100, //cm/s -> m/s
             car_pawn_->GetVehicleMovement()->GetCurrentGear(),
             NedTransform::toNedMeters(car_pawn_->GetActorLocation(), true),
-            NedTransform::toNedMeters(car_pawn_->GetVelocity(), true),
+            NedTransform::toNedMeters(car_pawn_->GetVelocity(), false),
             NedTransform::toQuaternionr(car_pawn_->GetActorRotation().Quaternion(), true),
-            car_pawn_->getVehiclePawnWrapper()->getCollisonInfo(),
+            car_pawn_->getVehiclePawnWrapper()->getCollisionInfo(),
             msr::airlib::ClockFactory::get()->nowNanos()
         );
         return state;
@@ -110,14 +119,14 @@ public:
     {
         UAirBlueprintLib::RunCommandOnGameThread([this]() {
             this->car_pawn_->reset(false);
-        });
+        }, true);
     }
 
-    virtual void simSetPose(const Pose& pose, bool ignore_collison) override
+    virtual void simSetPose(const Pose& pose, bool ignore_collision) override
     {
-        UAirBlueprintLib::RunCommandOnGameThread([this, pose, ignore_collison]() {
-            this->car_pawn_->getVehiclePawnWrapper()->setPose(pose, ignore_collison);
-        });
+        UAirBlueprintLib::RunCommandOnGameThread([this, pose, ignore_collision]() {
+            this->car_pawn_->getVehiclePawnWrapper()->setPose(pose, ignore_collision);
+        }, true);
     }
 
     virtual Pose simGetPose() override
@@ -578,12 +587,12 @@ void ACarPawn::BeginPlay()
 
 void ACarPawn::UpdateHUDStrings()
 {
-    float KPH = FMath::Abs(GetVehicleMovement()->GetForwardSpeed()) * 0.036f;
-    int32 KPH_int = FMath::FloorToInt(KPH);
+    float vel = FMath::Abs(GetVehicleMovement()->GetForwardSpeed() / 100); //cm/s -> m/s
+    float vel_rounded = FMath::FloorToInt(vel * 10) / 10.0f;
     int32 Gear = GetVehicleMovement()->GetCurrentGear();
 
     // Using FText because this is display text that should be localizable
-    SpeedDisplayString = FText::Format(LOCTEXT("SpeedFormat", "{0} km/h"), FText::AsNumber(KPH_int));
+    SpeedDisplayString = FText::Format(LOCTEXT("SpeedFormat", "{0} m/s"), FText::AsNumber(vel_rounded));
 
 
     if (bInReverseGear == true)

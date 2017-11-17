@@ -48,10 +48,10 @@ void UAirBlueprintLib::LogMessage(const FString &prefix, const FString &suffix, 
 
     FColor color;
     switch (level) {
-    case LogDebugLevel::Informational: color = FColor(5, 5, 100);; break;
-    case LogDebugLevel::Success: color = FColor::Green; break;
-    case LogDebugLevel::Failure: color = FColor::Red; break;
-    case LogDebugLevel::Unimportant: color = FColor::Silver; break;
+    case LogDebugLevel::Informational: color = FColor(147, 231, 237); break;
+    case LogDebugLevel::Success: color = FColor(156, 237, 147); break;
+    case LogDebugLevel::Failure: color = FColor(237, 147, 168); break;
+    case LogDebugLevel::Unimportant: color = FColor(237, 228, 147); break;
     default: color = FColor::Black; break;
     }
     GEngine->AddOnScreenDebugMessage(key, persist_sec, color, prefix + suffix);
@@ -205,17 +205,17 @@ int UAirBlueprintLib::GetMeshStencilID(const std::string& mesh_name)
     return -1;
 }
 
-bool UAirBlueprintLib::HasObstacle(const AActor* actor, const FVector& start, const FVector& end, const AActor* ignore_actor, ECollisionChannel collison_channel) 
+bool UAirBlueprintLib::HasObstacle(const AActor* actor, const FVector& start, const FVector& end, const AActor* ignore_actor, ECollisionChannel collision_channel) 
 {
     FCollisionQueryParams trace_params;
     trace_params.AddIgnoredActor(actor);
     if (ignore_actor != nullptr)
         trace_params.AddIgnoredActor(ignore_actor);
 
-    return actor->GetWorld()->LineTraceTestByChannel(start, end, collison_channel, trace_params);
+    return actor->GetWorld()->LineTraceTestByChannel(start, end, collision_channel, trace_params);
 }
 
-bool UAirBlueprintLib::GetObstacle(const AActor* actor, const FVector& start, const FVector& end, FHitResult& hit,  const AActor* ignore_actor, ECollisionChannel collison_channel) 
+bool UAirBlueprintLib::GetObstacle(const AActor* actor, const FVector& start, const FVector& end, FHitResult& hit,  const AActor* ignore_actor, ECollisionChannel collision_channel) 
 {
     hit = FHitResult(ForceInit);
 
@@ -224,10 +224,10 @@ bool UAirBlueprintLib::GetObstacle(const AActor* actor, const FVector& start, co
     if (ignore_actor != nullptr)
         trace_params.AddIgnoredActor(ignore_actor);
 
-    return actor->GetWorld()->LineTraceSingleByChannel(hit, start, end, collison_channel, trace_params);
+    return actor->GetWorld()->LineTraceSingleByChannel(hit, start, end, collision_channel, trace_params);
 }
 
-bool UAirBlueprintLib::GetLastObstaclePosition(const AActor* actor, const FVector& start, const FVector& end, FHitResult& hit, const AActor* ignore_actor, ECollisionChannel collison_channel) 
+bool UAirBlueprintLib::GetLastObstaclePosition(const AActor* actor, const FVector& start, const FVector& end, FHitResult& hit, const AActor* ignore_actor, ECollisionChannel collision_channel) 
 {
     TArray<FHitResult> hits;
 
@@ -236,7 +236,7 @@ bool UAirBlueprintLib::GetLastObstaclePosition(const AActor* actor, const FVecto
     if (ignore_actor != nullptr)
         trace_params.AddIgnoredActor(ignore_actor);
 
-    bool has_hit = actor->GetWorld()->LineTraceMultiByChannel(hits, start, end, collison_channel, trace_params);
+    bool has_hit = actor->GetWorld()->LineTraceMultiByChannel(hits, start, end, collision_channel, trace_params);
 
     if (hits.Num())
         hit = hits.Last(0);
@@ -251,14 +251,15 @@ void UAirBlueprintLib::FollowActor(AActor* follower, const AActor* followee, con
     if (followee == nullptr) {
         return;
     }
-    FVector next_location = followee->GetActorLocation() + offset;
+    FVector actor_location = followee->GetActorLocation() + FVector(0, 0, 4);
+    FVector next_location = actor_location + offset;
     if (fixed_z)
         next_location.Z = fixed_z_val;
 
-    if (GetLastObstaclePosition(follower, next_location, followee->GetActorLocation(), hit, followee)) {
+    if (GetObstacle(follower, next_location, actor_location, hit, followee)) {
         next_location = hit.ImpactPoint + offset;
 
-        if (GetLastObstaclePosition(follower, next_location, followee->GetActorLocation(), hit, followee)) {
+        if (GetObstacle(follower, next_location, actor_location, hit, followee)) {
             float next_z = next_location.Z;
             next_location = hit.ImpactPoint - offset;
             next_location.Z = next_z;
