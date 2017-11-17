@@ -1,8 +1,22 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
-VisualStudioVersion = 15.0.27004.2006
+VisualStudioVersion = 15.0.27004.2009
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{11C1B3C5-35A0-46EA-B532-100A14FDAAC6}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		.gitmodules = .gitmodules
+		.travis.yml = .travis.yml
+		build.cmd = build.cmd
+		build.sh = build.sh
+		clean.cmd = clean.cmd
+		clean.sh = clean.sh
+		LICENSE = LICENSE
+		README.md = README.md
+		setup.sh = setup.sh
+	EndProjectSection
+EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DroneShell", "DroneShell\DroneShell.vcxproj", "{9FE9234B-373A-4D5A-AD6B-FB0B593312DD}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AirLib", "AirLib\AirLib.vcxproj", "{4BFB7231-077A-4671-BD21-D3ADE3EA36E7}"
@@ -20,20 +34,6 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AirLibUnitTests", "AirLibUnitTests\AirLibUnitTests.vcxproj", "{2A61ED54-2B66-4B9B-99FA-299DD0EF57CD}"
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "PythonClient", "PythonClient\PythonClient.pyproj", "{E2049E20-B6DD-474E-8BCA-1C8DC54725AA}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{11C1B3C5-35A0-46EA-B532-100A14FDAAC6}"
-	ProjectSection(SolutionItems) = preProject
-		.gitignore = .gitignore
-		.gitmodules = .gitmodules
-		.travis.yml = .travis.yml
-		build.cmd = build.cmd
-		build.sh = build.sh
-		clean.cmd = clean.cmd
-		clean.sh = clean.sh
-		LICENSE = LICENSE
-		README.md = README.md
-		setup.sh = setup.sh
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HelloCar", "HelloCar\HelloCar.vcxproj", "{4358ED90-CCA1-47A8-8D68-A260F212931E}"
 EndProject
