@@ -301,7 +301,7 @@ private:
 };
 
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 
@@ -643,5 +643,5 @@ bool Params::set_param_by_name_float(const char name[PARAMS_NAME_LENGTH], float 
     return set_param_by_name_int(name, *(int32_t *)&value);
 }
 
-
+#endif
 } //namespace

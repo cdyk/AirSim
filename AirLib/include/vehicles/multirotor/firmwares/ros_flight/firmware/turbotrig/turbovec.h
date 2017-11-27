@@ -77,7 +77,7 @@ float fsat(float value, float max);
 int32_t sat(int32_t value, int32_t max);
 float fsign(float y);
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 
@@ -341,6 +341,7 @@ int32_t sat(int32_t value, int32_t max)
     return value;
 }
 
+#endif
 
 #ifdef __GNUC__
 _Pragma("GCC diagnostic pop")          

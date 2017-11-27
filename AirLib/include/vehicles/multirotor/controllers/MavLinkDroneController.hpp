@@ -1277,6 +1277,8 @@ public:
     }
 }; //impl
 
+#ifndef AIRSIM_NO_IMPL
+
    //empty constructor required for pimpl
 MavLinkDroneController::MavLinkDroneController()
 {
@@ -1485,6 +1487,7 @@ Pose MavLinkDroneController::getDebugPose()
 }
 
 
+#endif
 
 }} //namespace
 #endif

@@ -82,7 +82,7 @@ private:
     float acc_temp_sum = 0.0f;
 };
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 
@@ -369,6 +369,6 @@ void Sensors::correct_imu(void)
     _gyro.z -= params->get_param_float(Params::PARAM_GYRO_Z_BIAS);
 }
 
-
+#endif
 
 } //namespace

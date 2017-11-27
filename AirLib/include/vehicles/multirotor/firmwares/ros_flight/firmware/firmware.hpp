@@ -59,6 +59,7 @@ private:
 };
 
 
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 Firmware::Firmware(Board* _board, CommLink* _comm_link)
@@ -131,6 +132,7 @@ void Firmware::loop()
 }
 
 
+#endif
 
 } //namespace
 

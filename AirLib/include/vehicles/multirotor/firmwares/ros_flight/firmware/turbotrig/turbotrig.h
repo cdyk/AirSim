@@ -14,6 +14,7 @@ int32_t turbocos(int32_t x);
 int32_t turbosin(int32_t x);
 int32_t sign(int32_t y);
 
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 int16_t atan_lookup_table[1001] =
@@ -254,3 +255,5 @@ int32_t turboasin(int32_t x)
     }
     return asin_lookup_table[x];
 }
+
+#endif

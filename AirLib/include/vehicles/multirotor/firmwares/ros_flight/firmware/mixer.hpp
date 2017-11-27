@@ -141,7 +141,7 @@ private:
     mixer_t mixer_to_use;
 };
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 void Mixer::init(CommonState* _common_state, Board* _board, Params* _params)
@@ -295,6 +295,6 @@ void Mixer::mix_output()
     }
 }
 
-
+#endif
 
 } //namespace

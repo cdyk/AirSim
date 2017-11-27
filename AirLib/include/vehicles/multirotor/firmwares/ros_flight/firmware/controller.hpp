@@ -62,7 +62,7 @@ private:
 
 };
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 void Controller::init(CommonState* _common_state, Board* _board, Mux* _mux, Mixer* _mixer, Estimator* _estimator, Params* _params, CommLink* _comm_link)
 {
@@ -279,5 +279,5 @@ void Controller::run_controller()
     comm_link->notify_controller_updated();
 }
 
-
+#endif
 } //namespace

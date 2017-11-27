@@ -62,7 +62,7 @@ private:
         {true, Mux::control_type_t::THROTTLE, 0.0}};
 };
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 void Mux::init(CommonState* _common_state, Board* _board, Params* _params)
 {
@@ -186,6 +186,6 @@ bool Mux::mux_inputs()
     return true;
 }
 
-
+#endif
 
 } //namespace

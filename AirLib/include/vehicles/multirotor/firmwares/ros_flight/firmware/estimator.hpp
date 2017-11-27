@@ -70,6 +70,7 @@ private:
 };
 
 
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 
@@ -288,5 +289,5 @@ void Estimator::run_estimator(const vector_t& accel, const vector_t& gyro, const
 }
 
 
-
+#endif
 } //namespace

@@ -51,7 +51,7 @@ private:
     bool last_is_angle_control, last_is_altitude_control;
 };
 
-
+#ifndef AIRSIM_NO_IMPL
 /************************************************** Implementation ***************************************************************/
 
 void RC::init(CommonState* _common_state, Board* _board, Mux* _mux, Params* _params, CommLink* _comm_link)
@@ -343,7 +343,7 @@ void RC::calibrate_rc()
     _calibrate_rc = false;
 }
 
-
+#endif
 
 } //namespace
 #endif
