@@ -12,9 +12,6 @@ if [[ $1 == "--no-full-poly-car" ]]; then
     downloadHighPolySuv=false
 fi
 
-#get sub modules
-git submodule update --init --recursive
-
 #give user perms to access USB port - this is not needed if not using PX4 HIL
 #TODO: figure out how to do below in travis
 if [ "$(uname)" == "Darwin" ]; then
@@ -24,7 +21,12 @@ if [ "$(uname)" == "Darwin" ]; then
 
     #below takes way too long
     # brew install llvm@3.9
-    brew install --force-bottle homebrew/versions/llvm39
+    brew install --force-bottle llvm@3.9
+
+    brew install wget
+
+    export C_COMPILER=/usr/local/opt/llvm\@3.9/bin/clang
+    export COMPILER=/usr/local/opt/llvm\@3.9/bin/clang++
 else
     if [[ ! -z "${whoami}" ]]; then #this happens when running in travis
         sudo /usr/sbin/useradd -G dialout $USER
@@ -33,17 +35,51 @@ else
 
     #install clang and build tools
     sudo apt-get install -y build-essential
-    sudo apt-get install cmake
     wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
     sudo apt-get update
     sudo apt-get install -y clang-3.9 clang++-3.9
+
+    export C_COMPILER=clang-3.9
+    export COMPILER=clang++-3.9
+fi
+
+#download cmake - we need v3.9+ which is not available in Ubuntu 16.04
+if [[ ! -d "cmake_build/bin" ]]; then
+    echo "Downloading cmake..."
+    wget https://cmake.org/files/v3.10/cmake-3.10.2.tar.gz \
+        -O cmake.tar.gz
+    tar -xzf cmake.tar.gz
+    rm cmake.tar.gz
+    rm -rf ./cmake_build
+    mv ./cmake-3.10.2 ./cmake_build
+    pushd cmake_build
+    ./bootstrap
+    make
+    popd
+fi
+CMAKE="$(readlink -f cmake_build/bin/cmake)"
+
+# Download rpclib
+if [ ! -d "external/rpclib/rpclib-2.2.1" ]; then
+    echo "*********************************************************************************************"
+    echo "Downloading rpclib..."
+    echo "*********************************************************************************************"
+
+    wget  https://github.com/rpclib/rpclib/archive/v2.2.1.zip
+
+    # remove previous versions
+    rm -rf "external/rpclib"
+
+    mkdir -p "external/rpclib"
+    unzip v2.2.1.zip -d external/rpclib
+    rm v2.2.1.zip
 fi
 
 # Download high-polycount SUV model
 if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv" ]; then
     mkdir -p "Unreal/Plugins/AirSim/Content/VehicleAdv"
 fi
-if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv/SUV/v1.1.4" ]; then
+if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv/SUV/v1.1.7" ]; then
     if $downloadHighPolySuv; then
         echo "*********************************************************************************************"
         echo "Downloading high-poly car assets.... The download is ~37MB and can take some time."
@@ -55,7 +91,7 @@ if [ ! -d "Unreal/Plugins/AirSim/Content/VehicleAdv/SUV/v1.1.4" ]; then
         fi
         mkdir -p "suv_download_tmp"
         cd suv_download_tmp
-        wget  https://github.com/Microsoft/AirSim/releases/download/v1.1.4/car_assets.zip
+        wget  https://github.com/Microsoft/AirSim/releases/download/v1.1.7/car_assets.zip
         unzip car_assets.zip -d ../Unreal/Plugins/AirSim/Content/VehicleAdv
         cd ..
         rm -rf "suv_download_tmp" 
@@ -84,14 +120,16 @@ else
 fi
 
 #build libc++
-sudo rm -rf llvm-build
+if [ "$(uname)" == "Darwin" ]; then
+    rm -rf llvm-build
+else
+    sudo rm -rf llvm-build
+fi
 mkdir -p llvm-build
 pushd llvm-build >/dev/null
 
-export C_COMPILER=clang-3.9
-export COMPILER=clang++-3.9
 
-cmake -DCMAKE_C_COMPILER=${C_COMPILER} -DCMAKE_CXX_COMPILER=${COMPILER} \
+"$CMAKE" -DCMAKE_C_COMPILER=${C_COMPILER} -DCMAKE_CXX_COMPILER=${COMPILER} \
       -LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF -DLIBCXX_INSTALL_EXPERIMENTAL_LIBRARY=OFF \
       -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=./output \
             ../llvm-source-39
@@ -99,12 +137,21 @@ cmake -DCMAKE_C_COMPILER=${C_COMPILER} -DCMAKE_CXX_COMPILER=${COMPILER} \
 make cxx
 
 #install libc++ locally in output folder
-sudo make install-libcxx install-libcxxabi 
+if [ "$(uname)" == "Darwin" ]; then
+    make install-libcxx install-libcxxabi 
+else
+    sudo make install-libcxx install-libcxxabi 
+fi
 
 popd >/dev/null
 
 #install EIGEN library
-sudo rm -rf ./AirLib/deps/eigen3/Eigen
+
+if [ "$(uname)" == "Darwin" ]; then
+    rm -rf ./AirLib/deps/eigen3/Eigen
+else
+    sudo rm -rf ./AirLib/deps/eigen3/Eigen
+fi
 echo "downloading eigen..."
 wget http://bitbucket.org/eigen/eigen/get/3.3.2.zip
 unzip 3.3.2.zip -d temp_eigen

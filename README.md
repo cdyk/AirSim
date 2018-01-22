@@ -59,19 +59,22 @@ A better way to generate training data exactly the way you want is by accessing 
 
 Yet another way to use AirSim is so-called "Computer Vision" mode. In this mode, you don't have vehicle physics and dynamics but you can use keyboard to move around and use APIs to position the vehicle in any arbitrary pose and get images such as depth, disparity, surface normals or object segmentation. 
 
-[More details](image_apis.md)
+[More details](docs/image_apis.md)
 
 ### Tutorials
 
-- [Video - Setting up AirSim with Pixhawk Tutorial](https://youtu.be/1oY8Qu5maQQ) 
-- [Video - Using AirSim with Pixhawk Tutorial](https://youtu.be/HNWdYrtw3f0)
-- [Reinforcement Learning with AirSim](docs/reinforcement_learning.md)
+- [Video - Setting up AirSim with Pixhawk Tutorial](https://youtu.be/1oY8Qu5maQQ) by Chris Lovett
+- [Video - Using AirSim with Pixhawk Tutorial](https://youtu.be/HNWdYrtw3f0) by Chris Lovett
+- [Video - Using off-the-self environments with AirSim](https://www.youtube.com/watch?v=y09VbdQWvQY) by Jim Piavis
+- [Reinforcement Learning with AirSim](docs/reinforcement_learning.md) by Ashish Kapoor
+- [The Autonomous Driving Cookbook](https://aka.ms/AutonomousDrivingCookbook) by Microsoft Deep Learning and Robotics Garage Chapter
+- [Using TensorFlow for simple collision avoidance](https://github.com/simondlevy/AirSimTensorFlow) by Simon Levy and WLU team
+
 
 ## What's New
 
 * We now have the [car model](docs/using_car.md).
 * No need to build the code. Just download [binaries](https://github.com/Microsoft/AirSim/releases) and you are good to go!
-* The [tutorial](https://www.youtube.com/watch?v=y09VbdQWvQY) for using off-the-self environments with AirSim.
 * The [reinforcement learning example](docs/reinforcement_learning.md) with AirSim
 * New built-in flight controller called [simple_flight](docs/simple_flight.md) that "just works" without any additional setup. It is also now *default*. 
 * AirSim now also generates [depth as well as disparity images](docs/image_apis.md) that is in camera plan. 

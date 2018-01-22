@@ -49,7 +49,7 @@ public:
         /* Default values are requires so uninitialized instance doesn't have random values */
 
         bool use_serial = true; // false means use UDP instead
-        //Used to connect via HITL: needed only if use_serial = true
+                                //Used to connect via HITL: needed only if use_serial = true
         std::string serial_port = "*";
         int baud_rate = 115200;
 
@@ -77,7 +77,7 @@ public:
         uint8_t offboard_sysid = 134;
         int offboard_compid = 1;
         uint8_t vehicle_sysid = 135;
-        int vehicle_compid = 1;    
+        int vehicle_compid = 1;
 
         // if you want to select a specific local network adapter so you can reach certain remote machines (e.g. wifi versus ethernet) 
         // then you will want to change the LocalHostIp accordingly.  This default only works when log viewer and QGC are also on the
@@ -118,33 +118,34 @@ public:
 
     //*** Start: DroneControllerBase implementation ***//
 public:
-    Vector3r getPosition() override;
-    Vector3r getVelocity() override;
-    Quaternionr getOrientation() override;
-    LandedState getLandedState() override;
-    RCData getRCData() override;
-    void setRCData(const RCData& rcData) override;
+    virtual Kinematics::State getKinematicsEstimated() override;
+    virtual Vector3r getPosition() override;
+    virtual Vector3r getVelocity() override;
+    virtual Quaternionr getOrientation() override;
+    virtual LandedState getLandedState() override;
+    virtual RCData getRCData() override;
+    virtual void setRCData(const RCData& rcData) override;
 
-    bool armDisarm(bool arm, CancelableBase& cancelable_action) override;
-    bool takeoff(float max_wait_seconds, CancelableBase& cancelable_action) override;
-    bool land(float max_wait_seconds, CancelableBase& cancelable_action) override;
-    bool goHome(CancelableBase& cancelable_action) override; 
-    bool hover(CancelableBase& cancelable_action) override;
-    GeoPoint getHomeGeoPoint() override;
-    GeoPoint getGpsLocation() override;
+    virtual bool armDisarm(bool arm, CancelableBase& cancelable_action) override;
+    virtual bool takeoff(float max_wait_seconds, CancelableBase& cancelable_action) override;
+    virtual bool land(float max_wait_seconds, CancelableBase& cancelable_action) override;
+    virtual bool goHome(CancelableBase& cancelable_action) override;
+    virtual bool hover(CancelableBase& cancelable_action) override;
+    virtual GeoPoint getHomeGeoPoint() override;
+    virtual GeoPoint getGpsLocation() override;
     virtual void reportTelemetry(float renderTime) override;
 
-    float getCommandPeriod() override;
-    float getTakeoffZ() override;
-    float getDistanceAccuracy() override;
+    virtual float getCommandPeriod() override;
+    virtual float getTakeoffZ() override;
+    virtual float getDistanceAccuracy() override;
 
     virtual bool loopCommandPre() override;
     virtual void loopCommandPost() override;
-protected: 
-    void commandRollPitchZ(float pitch, float roll, float z, float yaw) override;
-    void commandVelocity(float vx, float vy, float vz, const YawMode& yaw_mode) override;
-    void commandVelocityZ(float vx, float vy, float z, const YawMode& yaw_mode) override;
-    void commandPosition(float x, float y, float z, const YawMode& yaw_mode) override;
+protected:
+    virtual void commandRollPitchZ(float pitch, float roll, float z, float yaw) override;
+    virtual void commandVelocity(float vx, float vy, float vz, const YawMode& yaw_mode) override;
+    virtual void commandVelocityZ(float vx, float vy, float z, const YawMode& yaw_mode) override;
+    virtual void commandPosition(float x, float y, float z, const YawMode& yaw_mode) override;
     const VehicleParams& getVehicleParams() override;
     //*** End: DroneControllerBase implementation ***//
 
@@ -197,7 +198,6 @@ public:
     mavlinkcom::MavLinkHilControls HilControlsMessage;
     mavlinkcom::MavLinkHilActuatorControls HilActuatorControlsMessage;
     mavlinkcom::MavLinkCommandLong CommandLongMessage;
-    mavlinkcom::MavLinkHilStateQuaternion HilStateQuaternionMessage;
 
     mavlinkcom::MavLinkHilSensor last_sensor_message_;
     mavlinkcom::MavLinkHilGps last_gps_message_;
@@ -259,7 +259,7 @@ public:
             message = is_available_message_;
         return is_available_;
     }
-    
+
     ConnectionInfo getMavConnectionInfo()
     {
         return connection_info_;
@@ -293,7 +293,7 @@ public:
             is_controls_0_1_ = true;
             Utils::setValue(rotor_controls_, 0.0f);
             //TODO: main_node_->setMessageInterval(...);
-            connection_->subscribe([=](std::shared_ptr<mavlinkcom::MavLinkConnection> connection, const mavlinkcom::MavLinkMessage& msg){
+            connection_->subscribe([=](std::shared_ptr<mavlinkcom::MavLinkConnection> connection, const mavlinkcom::MavLinkMessage& msg) {
                 unused(connection);
                 processMavMessages(msg);
             });
@@ -366,7 +366,7 @@ public:
                 qgc_proxy_ = nullptr;
             }
             else {
-                connection->subscribe([=](std::shared_ptr<mavlinkcom::MavLinkConnection> connection_val, const mavlinkcom::MavLinkMessage& msg){
+                connection->subscribe([=](std::shared_ptr<mavlinkcom::MavLinkConnection> connection_val, const mavlinkcom::MavLinkMessage& msg) {
                     unused(connection_val);
                     processQgcMessages(msg);
                 });
@@ -406,13 +406,13 @@ public:
         {
             mavlinkcom::SerialPortInfo info = *iter;
             if (
-                    (
-                        (info.vid == pixhawkVendorId) &&
-                        (info.pid == pixhawkFMUV4ProductId || info.pid == pixhawkFMUV2ProductId || info.pid == pixhawkFMUV2OldBootloaderProductId)
+                (
+                (info.vid == pixhawkVendorId) &&
+                    (info.pid == pixhawkFMUV4ProductId || info.pid == pixhawkFMUV2ProductId || info.pid == pixhawkFMUV2OldBootloaderProductId)
                     ) ||
                     (
-                        (info.displayName.find(L"PX4_") != std::string::npos)
-                    )
+                (info.displayName.find(L"PX4_") != std::string::npos)
+                        )
                 )
             {
                 // printf("Auto Selecting COM port: %S\n", info.displayName.c_str());
@@ -423,7 +423,7 @@ public:
     }
 
     void connect()
-    {        
+    {
         createMavConnection(connection_info_);
         initializeMavSubscriptions();
     }
@@ -454,7 +454,7 @@ public:
 
         addStatusMessage(Utils::stringf("Connecting to UDP port %d, local IP %s, remote IP...", port, connection_info_.local_host_ip.c_str(), ip.c_str()));
         connection_ = mavlinkcom::MavLinkConnection::connectRemoteUdp("hil", connection_info_.local_host_ip, ip, port);
-        hil_node_ = std::make_shared<mavlinkcom::MavLinkNode>(connection_info_.sim_sysid, connection_info_.sim_compid); 
+        hil_node_ = std::make_shared<mavlinkcom::MavLinkNode>(connection_info_.sim_sysid, connection_info_.sim_compid);
         hil_node_->connect(connection_);
         addStatusMessage(std::string("Connected over UDP."));
 
@@ -463,11 +463,11 @@ public:
         if (connection_info_.sitl_ip_address != "" && connection_info_.sitl_ip_port != 0 && connection_info_.sitl_ip_port != port) {
             // bugbug: the PX4 SITL mode app cannot receive commands to control the drone over the same mavlink connection
             // as the HIL_SENSOR messages, we must establish a separate mavlink channel for that so that DroneShell works.
-            addStatusMessage(Utils::stringf("Connecting to PX4 SITL UDP port %d, local IP %s, remote IP...", 
+            addStatusMessage(Utils::stringf("Connecting to PX4 SITL UDP port %d, local IP %s, remote IP...",
                 connection_info_.sitl_ip_port, connection_info_.local_host_ip.c_str(), connection_info_.sitl_ip_address.c_str()));
 
-            auto sitlconnection = mavlinkcom::MavLinkConnection::connectRemoteUdp("sitl", 
-                connection_info_.local_host_ip, connection_info_.sitl_ip_address, connection_info_.sitl_ip_port);		
+            auto sitlconnection = mavlinkcom::MavLinkConnection::connectRemoteUdp("sitl",
+                connection_info_.local_host_ip, connection_info_.sitl_ip_address, connection_info_.sitl_ip_port);
             mav_vehicle_->connect(sitlconnection);
 
             addStatusMessage(std::string("Connected to SITL over UDP."));
@@ -625,10 +625,10 @@ public:
 
         mavlinkcom::MavLinkHilSensor hil_sensor;
         hil_sensor.time_usec = static_cast<uint64_t>(Utils::getTimeSinceEpochNanos() / 1000.0);
+       
         hil_sensor.xacc = acceleration.x();
         hil_sensor.yacc = acceleration.y();
         hil_sensor.zacc = acceleration.z();
-
         hil_sensor.xgyro = gyro.x();
         hil_sensor.ygyro = gyro.y();
         hil_sensor.zgyro = gyro.z();
@@ -639,7 +639,7 @@ public:
 
         hil_sensor.abs_pressure = abs_pressure;
         hil_sensor.pressure_alt = pressure_alt;
-        //TODO: enable tempeprature? diff_presure
+        //TODO: enable temperature? diff_pressure
         hil_sensor.fields_updated = was_reset_ ? (1 << 31) : 0;
 
         if (hil_node_ != nullptr) {
@@ -746,8 +746,8 @@ public:
         const auto& mag_output = getMagnetometer()->getOutput();
         const auto& baro_output = getBarometer()->getOutput();
 
-        sendHILSensor(imu_output.linear_acceleration, 
-            imu_output.angular_velocity, 
+        sendHILSensor(imu_output.linear_acceleration,
+            imu_output.angular_velocity,
             mag_output.magnetic_field_body,
             baro_output.pressure * 0.01f /*Pa to Milibar */, baro_output.altitude);
 
@@ -808,8 +808,8 @@ public:
 
     void getMocapPose(Vector3r& position, Quaternionr& orientation)
     {
-        position.x() = MocapPoseMessage.x; position.y() = MocapPoseMessage.y; position.z() = MocapPoseMessage.z; 
-        orientation.w() = MocapPoseMessage.q[0]; orientation.x() = MocapPoseMessage.q[1]; 
+        position.x() = MocapPoseMessage.x; position.y() = MocapPoseMessage.y; position.z() = MocapPoseMessage.z;
+        orientation.w() = MocapPoseMessage.q[0]; orientation.x() = MocapPoseMessage.q[1];
         orientation.y() = MocapPoseMessage.q[2]; orientation.z() = MocapPoseMessage.q[3];
     }
 
@@ -932,6 +932,20 @@ public:
             }
         }
     }
+    
+    Kinematics::State getKinematicsEstimated()
+    {
+        updateState();
+        Kinematics::State state;
+        //TODO: reduce code duplication below?
+        state.pose.position = Vector3r(current_state.local_est.pos.x, current_state.local_est.pos.y, current_state.local_est.pos.z);
+        state.pose.orientation = VectorMath::toQuaternion(current_state.attitude.pitch, current_state.attitude.roll, current_state.attitude.yaw);
+        state.twist.linear = Vector3r(current_state.local_est.lin_vel.x, current_state.local_est.lin_vel.y, current_state.local_est.lin_vel.z);
+        state.twist.angular = Vector3r(current_state.attitude.roll_rate, current_state.attitude.pitch_rate, current_state.attitude.yaw_rate);
+        state.pose.position = Vector3r(current_state.local_est.acc.x, current_state.local_est.acc.y, current_state.local_est.acc.z);
+        //TODO: how do we get angular acceleration?
+        return state;
+    }
 
     Vector3r getPosition()
     {
@@ -942,7 +956,13 @@ public:
     Vector3r getVelocity()
     {
         updateState();
-        return Vector3r(current_state.local_est.vel.vx, current_state.local_est.vel.vy, current_state.local_est.vel.vz);
+        return Vector3r(current_state.local_est.lin_vel.x, current_state.local_est.lin_vel.y, current_state.local_est.lin_vel.z);
+    }
+
+    Quaternionr getOrientation()
+    {
+        updateState();
+        return VectorMath::toQuaternion(current_state.attitude.pitch, current_state.attitude.roll, current_state.attitude.yaw);
     }
 
     GeoPoint getHomeGeoPoint()
@@ -960,11 +980,6 @@ public:
         return GeoPoint(current_state.global_est.pos.lat, current_state.global_est.pos.lon, current_state.global_est.pos.alt);
     }
 
-    Quaternionr getOrientation()
-    {
-        updateState();
-        return VectorMath::toQuaternion(current_state.attitude.pitch, current_state.attitude.roll, current_state.attitude.yaw);
-    }
 
     LandedState getLandedState()
     {
@@ -1035,7 +1050,7 @@ public:
         if (max_wait_seconds <= 0)
             return true; // client doesn't want to wait.
 
-        return parent_->waitForZ(max_wait_seconds, z, getDistanceAccuracy(), cancelable_action);        
+        return parent_->waitForZ(max_wait_seconds, z, getDistanceAccuracy(), cancelable_action);
     }
 
     bool hover(CancelableBase& cancelable_action)
@@ -1068,11 +1083,11 @@ public:
             {
                 throw VehicleMoveException("Landing command - timeout waiting for response from drone");
             }
-            else if(!rc) {
+            else if (!rc) {
                 throw VehicleMoveException("Landing command rejected by drone");
             }
         }
-        else 
+        else
         {
             throw VehicleMoveException("Cannot land safely with out a home position that tells us the home altitude.  Could fix this if we hook up a distance to ground sensor...");
         }
@@ -1150,17 +1165,17 @@ public:
     }
 
     //drone parameters
-    float getCommandPeriod() 
+    float getCommandPeriod()
     {
-        return 1.0f/50; //1 period of 50hz
+        return 1.0f / 50; //1 period of 50hz
     }
     float getTakeoffZ()
     {
         // pick a number, PX4 doesn't have a fixed limit here, but 3 meters is probably safe 
         // enough to get out of the backwash turbulance.  Negative due to NED coordinate system.
-        return -3.0f;    
+        return -3.0f;
     }
-    float getDistanceAccuracy() 
+    float getDistanceAccuracy()
     {
         return 0.5f;    //measured in simulator by firing commands "MoveToLocation -x 0 -y 0" multiple times and looking at distance travelled
     }
@@ -1250,7 +1265,7 @@ public:
         ensureSafeMode();
     }
 
-    void ensureSafeMode() 
+    void ensureSafeMode()
     {
         if (mav_vehicle_ != nullptr) {
             const mavlinkcom::VehicleState& state = mav_vehicle_->getVehicleState();
@@ -1347,6 +1362,11 @@ bool MavLinkDroneController::isAvailable(std::string& message)
 
 
 //DroneControlBase
+Kinematics::State MavLinkDroneController::getKinematicsEstimated()
+{
+    return pimpl_->getKinematicsEstimated();
+}
+
 Vector3r MavLinkDroneController::getPosition()
 {
     return pimpl_->getPosition();
@@ -1357,6 +1377,11 @@ Vector3r MavLinkDroneController::getVelocity()
     return pimpl_->getVelocity();
 }
 
+Quaternionr MavLinkDroneController::getOrientation()
+{
+    return pimpl_->getOrientation();
+}
+
 GeoPoint MavLinkDroneController::getHomeGeoPoint()
 {
     return pimpl_->getHomeGeoPoint();
@@ -1365,11 +1390,6 @@ GeoPoint MavLinkDroneController::getHomeGeoPoint()
 GeoPoint MavLinkDroneController::getGpsLocation()
 {
     return pimpl_->getGpsLocation();
-}
-
-Quaternionr MavLinkDroneController::getOrientation()
-{
-    return pimpl_->getOrientation();
 }
 
 DroneControllerBase::LandedState MavLinkDroneController::getLandedState()
@@ -1458,7 +1478,7 @@ void MavLinkDroneController::loopCommandPost()
 }
 
 //drone parameters
-float MavLinkDroneController::getCommandPeriod() 
+float MavLinkDroneController::getCommandPeriod()
 {
     return pimpl_->getCommandPeriod();
 }
@@ -1466,7 +1486,7 @@ float MavLinkDroneController::getTakeoffZ()
 {
     return pimpl_->getTakeoffZ();
 }
-float MavLinkDroneController::getDistanceAccuracy() 
+float MavLinkDroneController::getDistanceAccuracy()
 {
     return pimpl_->getDistanceAccuracy();
 }

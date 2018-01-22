@@ -4,10 +4,11 @@
 #ifndef air_CarApiBase_hpp
 #define air_CarApiBase_hpp
 
-#include "controllers/VehicleCameraBase.hpp"
+#include "common/ImageCaptureBase.hpp"
 #include "common/VectorMath.hpp"
 #include "common/CommonStructs.hpp"
 #include "api/VehicleApiBase.hpp"
+#include "physics/Kinematics.hpp"
 
 namespace msr { namespace airlib {
 
@@ -49,22 +50,21 @@ public:
     struct CarState {
         float speed;
         int gear;
-        Vector3r position;
-        Vector3r velocity;
-        Quaternionr orientation;
         CollisionInfo collision;
+        Kinematics::State kinematics_true;
         uint64_t timestamp;
 
-        CarState(float speed_val, int gear_val, const Vector3r& position_val, const Vector3r& velocity_val,
-            const Quaternionr& orientation_val, const CollisionInfo& collision_val, uint64_t timestamp_val)
-            : speed(speed_val), gear(gear_val), position(position_val), velocity(velocity_val),
-            orientation(orientation_val), collision(collision_val), timestamp(timestamp_val)
+        CarState(float speed_val, int gear_val, const CollisionInfo& collision_val, 
+            const Kinematics::State& kinematics_true_val, uint64_t timestamp_val)
+            : speed(speed_val), gear(gear_val), collision(collision_val), kinematics_true(kinematics_true_val), timestamp(timestamp_val)
         {
         }
     };
 
     virtual void setCarControls(const CarControls& controls) = 0;
     virtual CarState getCarState() = 0;
+    virtual const CarApiBase::CarControls& getCarControls() const = 0;
+
     virtual ~CarApiBase() = default;
 };
 

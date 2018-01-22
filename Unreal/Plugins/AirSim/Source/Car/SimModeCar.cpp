@@ -1,6 +1,7 @@
 #include "SimModeCar.h"
 #include "ConstructorHelpers.h"
 #include "AirBlueprintLib.h"
+#include "common/AirSimSettings.hpp"
 #include "Car/CarPawn.h"
 
 ASimModeCar::ASimModeCar()
@@ -28,9 +29,6 @@ void ASimModeCar::BeginPlay()
     Super::BeginPlay();
 
     createVehicles(vehicles_);
-
-    // Timestamp \t Speed \t Throttle \t Steering \t Brake \t gear \t ImageName
-    columns = { "Timestamp", "Speed (kmph)", "Throttle" , "Steering", "Brake", "Gear", "ImageName" };
 
     report_wrapper_.initialize(false);
     report_wrapper_.reset();
@@ -111,13 +109,15 @@ void ASimModeCar::setupVehiclesAndCamera(std::vector<VehiclePtr>& vehicles)
             //initialize each vehicle pawn we found
             TVehiclePawn* vehicle_pawn = static_cast<TVehiclePawn*>(pawn);
             vehicles.push_back(vehicle_pawn);
-            vehicle_pawn->initializeForBeginPlay(enable_rpc, api_server_address, engine_sound);
 
             //chose first pawn as FPV if none is designated as FPV
             VehiclePawnWrapper* wrapper = vehicle_pawn->getVehiclePawnWrapper();
-            if (enable_collision_passthrough)
-                wrapper->config.enable_passthrough_on_collisions = true;
-            if (wrapper->config.is_fpv_vehicle || fpv_vehicle_pawn_wrapper_ == nullptr)
+            vehicle_pawn->initializeForBeginPlay(getSettings().enable_rpc, 
+                getSettings().api_server_address, getSettings().engine_sound);
+
+            if (getSettings().enable_collision_passthrough)
+                wrapper->getConfig().enable_passthrough_on_collisions = true;
+            if (wrapper->getConfig().is_fpv_vehicle || fpv_vehicle_pawn_wrapper_ == nullptr)
                 fpv_vehicle_pawn_wrapper_ = wrapper;
         }
     }
@@ -125,6 +125,22 @@ void ASimModeCar::setupVehiclesAndCamera(std::vector<VehiclePtr>& vehicles)
     CameraDirector->initializeForBeginPlay(getInitialViewMode(), fpv_vehicle_pawn_wrapper_, external_camera);
 }
 
+
+int ASimModeCar::getRemoteControlID(const VehiclePawnWrapper& pawn)
+{
+    typedef msr::airlib::AirSimSettings AirSimSettings;
+
+    //find out which RC we should use
+    AirSimSettings::VehicleSettings vehicle_settings =
+        AirSimSettings::singleton().getVehicleSettings(fpv_vehicle_pawn_wrapper_->getVehicleConfigName());
+
+    msr::airlib::Settings settings;
+    vehicle_settings.getRawSettings(settings);
+
+    msr::airlib::Settings rc_settings;
+    settings.getChild("RC", rc_settings);
+    return rc_settings.getInt("RemoteControlID", -1);
+}
 
 void ASimModeCar::createVehicles(std::vector<VehiclePtr>& vehicles)
 {
@@ -168,12 +184,12 @@ void ASimModeCar::updateReport()
     for (VehiclePtr vehicle : vehicles_) {
         VehiclePawnWrapper* wrapper = vehicle->getVehiclePawnWrapper();
         msr::airlib::StateReporter& reporter = * report_wrapper_.getReporter();
-        std::string vehicle_name = std::string(TCHAR_TO_UTF8(* wrapper->config.vehicle_config_name));
+        std::string vehicle_name = fpv_vehicle_pawn_wrapper_->getVehicleConfigName();
 
         reporter.writeHeading(std::string("Vehicle: ").append(
             vehicle_name == "" ? "(default)" : vehicle_name));
 
-        const msr::airlib::Kinematics::State* kinematics = wrapper->getKinematics();
+        const msr::airlib::Kinematics::State* kinematics = wrapper->getTrueKinematics();
 
         reporter.writeValue("Position", kinematics->pose.position);
         reporter.writeValue("Orientation", kinematics->pose.orientation);

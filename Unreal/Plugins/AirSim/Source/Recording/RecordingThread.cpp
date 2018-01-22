@@ -11,20 +11,21 @@ std::unique_ptr<FRecordingThread> FRecordingThread::instance_;
 
 
 FRecordingThread::FRecordingThread()
-    : stop_task_counter_(0), camera_(nullptr), recording_file_(nullptr), kinematics_(nullptr), is_ready_(false)
+    : stop_task_counter_(0), recording_file_(nullptr), kinematics_(nullptr), is_ready_(false)
 {
     thread_.reset(FRunnableThread::Create(this, TEXT("FRecordingThread"), 0, TPri_BelowNormal)); // Windows default, possible to specify more priority
 }
 
 
-void FRecordingThread::startRecording(msr::airlib::VehicleCameraBase* camera, const msr::airlib::Kinematics::State* kinematics, const RecordingSettings& settings, std::vector <std::string> columns, VehiclePawnWrapper* wrapper)
+void FRecordingThread::startRecording(msr::airlib::ImageCaptureBase* image_capture, const msr::airlib::Kinematics::State* kinematics, 
+    const RecordingSettings& settings, VehiclePawnWrapper* wrapper)
 {
     stopRecording();
 
     //TODO: check FPlatformProcess::SupportsMultithreading()?
 
     instance_.reset(new FRecordingThread());
-    instance_->camera_ = camera;
+    instance_->image_capture_ = image_capture;
     instance_->kinematics_ = kinematics;
     instance_->settings_ = settings;
     instance_->wrapper_ = wrapper;
@@ -34,7 +35,7 @@ void FRecordingThread::startRecording(msr::airlib::VehicleCameraBase* camera, co
 
     instance_->is_ready_ = true;
 
-    instance_->recording_file_.reset(new RecordingFile(columns));
+    instance_->recording_file_.reset(new RecordingFile(instance_->settings_.header_columns));
     instance_->recording_file_->startRecording();
 }
 
@@ -61,7 +62,7 @@ void FRecordingThread::stopRecording()
 
 bool FRecordingThread::Init()
 {
-    if (camera_ && recording_file_)
+    if (image_capture_ && recording_file_)
     {
         UAirBlueprintLib::LogMessage(TEXT("Initiated recording thread"), TEXT(""), LogDebugLevel::Success);
     }
@@ -83,10 +84,10 @@ uint32 FRecordingThread::Run()
 
                 // todo: should we go as fast as possible, or should we limit this to a particular number of
                 // frames per second?
-                auto response = camera_->getImage(msr::airlib::VehicleCameraBase::ImageType::Scene, false, true);
-                TArray<uint8_t> image_data;
-                image_data.Append(response.image_data_uint8.data(), response.image_data_uint8.size());
-                recording_file_->appendRecord(image_data, wrapper_);
+                
+                std::vector<msr::airlib::ImageCaptureBase::ImageResponse> responses;
+                image_capture_->getImages(settings_.requests, responses);
+                recording_file_->appendRecord(responses, wrapper_);
             }
         }
     }

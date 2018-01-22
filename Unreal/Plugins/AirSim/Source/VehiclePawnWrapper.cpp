@@ -5,6 +5,7 @@
 #include "ConstructorHelpers.h"
 #include "AirBlueprintLib.h"
 #include "common/ClockFactory.hpp"
+#include "common/AirSimSettings.hpp"
 #include "NedTransform.h"
 
 
@@ -20,47 +21,17 @@ VehiclePawnWrapper::VehiclePawnWrapper()
 void VehiclePawnWrapper::setupCamerasFromSettings()
 {
     typedef msr::airlib::Settings Settings;
-    typedef msr::airlib::VehicleCameraBase::ImageType ImageType;
+    typedef msr::airlib::ImageCaptureBase::ImageType ImageType;
+    typedef msr::airlib::AirSimSettings AirSimSettings;
 
-    Settings& json_settings_root = Settings::singleton();
-    Settings json_settings_parent;
-    if (json_settings_root.getChild("CaptureSettings", json_settings_parent)) {
-        for (size_t child_index = 0; child_index < json_settings_parent.size(); ++child_index) {
-            Settings json_settings_child;     
-            if (json_settings_parent.getChild(child_index, json_settings_child)) {
-                APIPCamera::CaptureSettings capture_settings;;
-                createCaptureSettings(json_settings_child, capture_settings);
-
-                int image_type = json_settings_child.getInt("ImageType", -1);
-
-                if (image_type == -1) {
-                    UAirBlueprintLib::LogMessageString("ImageType not set in <CaptureSettings> element(s) in settings.json", 
-                        std::to_string(child_index), LogDebugLevel::Failure);
-                    continue;
-                }
-
-                for (int camera_index = 0; camera_index < getCameraCount(); ++camera_index) {
-                    APIPCamera* camera = getCamera(camera_index);
-                    camera->setCaptureSettings(Utils::toEnum<ImageType>(image_type), capture_settings);
-                }
-            }
+    int image_count = static_cast<int>(Utils::toNumeric(ImageType::Count));
+    for (int image_type = -1; image_type < image_count; ++image_type) {
+        for (int camera_index = 0; camera_index < getCameraCount(); ++camera_index) {
+            APIPCamera* camera = getCamera(camera_index);
+            camera->setImageTypeSettings(image_type, AirSimSettings::singleton().capture_settings[image_type], 
+                AirSimSettings::singleton().noise_settings[image_type]);
         }
     }
-}
-
-void VehiclePawnWrapper::createCaptureSettings(const msr::airlib::Settings& settings, APIPCamera::CaptureSettings& capture_settings)
-{
-    typedef msr::airlib::Settings Settings;
-
-    capture_settings.width = settings.getInt("Width", capture_settings.width);
-    capture_settings.height = settings.getInt("Height", capture_settings.height);
-    capture_settings.fov_degrees = settings.getFloat("FOV_Degrees", capture_settings.fov_degrees);
-    capture_settings.auto_exposure_speed = settings.getFloat("AutoExposureSpeed", capture_settings.auto_exposure_speed);
-    capture_settings.auto_exposure_bias = settings.getFloat("AutoExposureBias", capture_settings.auto_exposure_bias);
-    capture_settings.auto_exposure_max_brightness = settings.getFloat("AutoExposureMaxBrightness", capture_settings.auto_exposure_max_brightness);
-    capture_settings.auto_exposure_min_brightness = settings.getFloat("AutoExposureMinBrightness", capture_settings.auto_exposure_min_brightness);
-    capture_settings.motion_blur_amount = settings.getFloat("MotionBlurAmount", capture_settings.motion_blur_amount);
-    capture_settings.target_gamma = settings.getFloat("TargetGamma", capture_settings.target_gamma);
 }
 
 
@@ -104,7 +75,7 @@ void VehiclePawnWrapper::displayCollisionEffect(FVector hit_location, const FHit
     }
 }
 
-const msr::airlib::Kinematics::State* VehiclePawnWrapper::getKinematics()
+const msr::airlib::Kinematics::State* VehiclePawnWrapper::getTrueKinematics()
 {
     return kinematics_;
 }
@@ -114,14 +85,35 @@ void VehiclePawnWrapper::setKinematics(const msr::airlib::Kinematics::State* kin
     kinematics_ = kinematics;
 }
 
-void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras)
+std::string VehiclePawnWrapper::getVehicleConfigName() const 
+{
+    return getConfig().vehicle_config_name == "" ? msr::airlib::AirSimSettings::singleton().default_vehicle_config
+        : getConfig().vehicle_config_name;
+}
+
+int VehiclePawnWrapper::getRemoteControlID() const
+{
+    typedef msr::airlib::AirSimSettings AirSimSettings;
+
+    //find out which RC we should use
+    AirSimSettings::VehicleSettings vehicle_settings =
+        AirSimSettings::singleton().getVehicleSettings(getVehicleConfigName());
+
+    msr::airlib::Settings settings;
+    vehicle_settings.getRawSettings(settings);
+
+    msr::airlib::Settings rc_settings;
+    settings.getChild("RC", rc_settings);
+    return rc_settings.getInt("RemoteControlID", -1);
+}
+
+void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>& cameras, const WrapperConfig& config)
 {
     pawn_ = pawn;
     cameras_ = cameras;
+    config_ = config;
 
-    for (auto camera : cameras_) {
-        camera_connectors_.push_back(std::unique_ptr<VehicleCameraConnector>(new VehicleCameraConnector(camera)));
-    }
+    image_capture_.reset(new UnrealImageCapture(cameras_));
 
     if (!NedTransform::isInitialized())
         NedTransform::initialize(pawn_);
@@ -153,6 +145,15 @@ void VehiclePawnWrapper::initialize(APawn* pawn, const std::vector<APIPCamera*>&
     setupCamerasFromSettings();
 }
 
+VehiclePawnWrapper::WrapperConfig& VehiclePawnWrapper::getConfig()
+{
+    return config_;
+}
+
+const VehiclePawnWrapper::WrapperConfig& VehiclePawnWrapper::getConfig() const
+{
+    return config_;
+}
 
 APIPCamera* VehiclePawnWrapper::getCamera(int index)
 {
@@ -162,10 +163,9 @@ APIPCamera* VehiclePawnWrapper::getCamera(int index)
     return cameras_.at(index);
 }
 
-VehicleCameraConnector* VehiclePawnWrapper::getCameraConnector(int index)
+UnrealImageCapture* VehiclePawnWrapper::getImageCapture()
 {
-    //should be overridden in derived class
-    return camera_connectors_.at(index).get();
+    return image_capture_.get();
 }
 
 int VehiclePawnWrapper::getCameraCount()
@@ -176,7 +176,10 @@ int VehiclePawnWrapper::getCameraCount()
 void VehiclePawnWrapper::reset()
 {
     state_ = initial_state_;
-
+    //if (pawn_->GetRootPrimitiveComponent()->IsAnySimulatingPhysics()) {
+    //    pawn_->GetRootPrimitiveComponent()->SetSimulatePhysics(false);
+    //    pawn_->GetRootPrimitiveComponent()->SetSimulatePhysics(true);
+    //}
     pawn_->SetActorLocationAndRotation(state_.start_location, state_.start_rotation, false, nullptr, ETeleportType::TeleportPhysics);
 
     //TODO: delete below
@@ -251,11 +254,21 @@ void VehiclePawnWrapper::plot(std::istream& s, FColor color, const Vector3r& off
 
 }
 
+void VehiclePawnWrapper::printLogMessage(const std::string& message, const std::string& message_param, unsigned char severity)
+{
+    UAirBlueprintLib::LogMessageString(message, message_param, static_cast<LogDebugLevel>(severity));
+}
+
 //parameters in NED frame
 VehiclePawnWrapper::Pose VehiclePawnWrapper::getPose() const
 {
-    const Vector3r& position = NedTransform::toNedMeters(getPosition());
-    const Quaternionr& orientation = NedTransform::toQuaternionr(pawn_->GetActorRotation().Quaternion(), true);
+    return toPose(getPosition(), pawn_->GetActorRotation().Quaternion());
+}
+
+VehiclePawnWrapper::Pose VehiclePawnWrapper::toPose(const FVector& u_position, const FQuat& u_quat)
+{
+    const Vector3r& position = NedTransform::toNedMeters(u_position);
+    const Quaternionr& orientation = NedTransform::toQuaternionr(u_quat, true);
     return Pose(position, orientation);
 }
 
@@ -298,7 +311,7 @@ void VehiclePawnWrapper::setDebugPose(const Pose& debug_pose)
         FVector debug_position = state_.current_debug_position - state_.debug_position_offset;
         if ((state_.last_debug_position - debug_position).SizeSquared() > 0.25) {
             UKismetSystemLibrary::DrawDebugLine(pawn_->GetWorld(), state_.last_debug_position, debug_position, FColor(0xaa, 0x33, 0x11), -1, 10.0F);
-            UAirBlueprintLib::LogMessage("Debug Pose: ", debug_position.ToCompactString(), LogDebugLevel::Informational);
+            UAirBlueprintLib::LogMessage(FString("Debug Pose: "), debug_position.ToCompactString(), LogDebugLevel::Informational);
             state_.last_debug_position = debug_position;
         }
     }
@@ -327,5 +340,11 @@ std::string VehiclePawnWrapper::getLogLine()
     return log_line_;
 }
 
+msr::airlib::Pose VehiclePawnWrapper::getActorPose(std::string actor_name)
+{
+    AActor* actor = UAirBlueprintLib::FindActor<AActor>(pawn_, FString(actor_name.c_str()));
+    return actor ? toPose(actor->GetActorLocation(), actor->GetActorQuat())
+        : Pose::nanPose();
+}
 
 

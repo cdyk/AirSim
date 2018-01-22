@@ -3,30 +3,34 @@
 #include "CoreMinimal.h"
 #include "AirBlueprintLib.h"
 #include "HAL/Runnable.h"
-#include "VehicleCameraConnector.h"
+#include "UnrealImageCapture.h"
 #include "VehiclePawnWrapper.h"
 #include "Recording/RecordingFile.h"
 #include "physics/Kinematics.hpp"
-#include "Recording/RecordingSettings.h"
 #include <memory>
 #include "common/ClockFactory.hpp"
+#include "common/AirSimSettings.hpp"
 
 class FRecordingThread : public FRunnable
 {
 public:
+    typedef msr::airlib::AirSimSettings::RecordingSettings RecordingSettings;
+
+public:
     FRecordingThread();
     virtual ~FRecordingThread();
-    static void startRecording(msr::airlib::VehicleCameraBase* camera, const msr::airlib::Kinematics::State* kinematics, const RecordingSettings& settings, std::vector <std::string> columns, VehiclePawnWrapper* wrapper);
+    static void startRecording(msr::airlib::ImageCaptureBase* camera, const msr::airlib::Kinematics::State* kinematics, 
+        const RecordingSettings& settings, VehiclePawnWrapper* wrapper);
     static void stopRecording(); 
     static bool isRecording();
 
+protected:
+    virtual bool Init() override;
+    virtual uint32 Run() override;
+    virtual void Stop() override;
+    virtual void Exit() override;
+
 private:
-    virtual bool Init();
-    virtual uint32 Run();
-    virtual void Stop();
-    virtual void Exit();
-
-
     void EnsureCompletion();
 
 private:
@@ -38,7 +42,7 @@ private:
     std::unique_ptr<FRunnableThread> thread_;
 
     RecordingSettings settings_;
-    msr::airlib::VehicleCameraBase* camera_;
+    msr::airlib::ImageCaptureBase* image_capture_;
     std::unique_ptr<RecordingFile> recording_file_;
     const msr::airlib::Kinematics::State* kinematics_;
     VehiclePawnWrapper* wrapper_;

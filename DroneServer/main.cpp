@@ -6,7 +6,7 @@
 #include "vehicles/multirotor/api/MultirotorRpcLibServer.hpp"
 #include "vehicles/multirotor/controllers/MavLinkDroneController.hpp"
 #include "vehicles/multirotor/controllers/RealMultirotorConnector.hpp"
-#include "controllers/Settings.hpp"
+#include "common/Settings.hpp"
 
 using namespace std;
 using namespace msr::airlib;
@@ -68,7 +68,7 @@ int main(int argc, const char* argv[])
 
     }
     else {
-        std::cout << "Could not load settings from " << Settings::singleton().getFileName() << std::endl;
+        std::cout << "Could not load settings from " << Settings::singleton().getFullFilePath() << std::endl;
         return 3;
 
     }
@@ -79,7 +79,7 @@ int main(int argc, const char* argv[])
 
     RealMultirotorConnector connector(& mav_drone);
 
-    DroneApi server_wrapper(& connector);
+    MultirotorApi server_wrapper(& connector);
     msr::airlib::MultirotorRpcLibServer server(&server_wrapper, connection_info.local_host_ip);
     
     //start server in async mode

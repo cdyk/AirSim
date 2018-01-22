@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 //TODO: all code except setRotorSpeed requires VehiclePawnBase.
 //May be we should have MultiRotorPawnBase so we don't need FlyingPawn.h
-#include "vehicles/multirotor/api/DroneApi.hpp"
+#include "vehicles/multirotor/api/MultirotorApi.hpp"
 #include "VehiclePawnWrapper.h"
 #include "vehicles/multirotor/MultiRotor.hpp"
 #include "vehicles/multirotor/MultiRotorParams.hpp"
@@ -15,6 +15,8 @@
 #include <chrono>
 #include "api/ControlServerBase.hpp"
 #include "SimJoyStick/SimJoyStick.h"
+#include <future>
+
 
 class MultiRotorConnector : public msr::airlib::VehicleConnectorBase
 {
@@ -53,17 +55,23 @@ public:
 
     virtual void setPose(const Pose& pose, bool ignore_collision) override;
     virtual Pose getPose() override;
+    virtual Kinematics::State getTrueKinematics() override;
+
 
     virtual bool setSegmentationObjectID(const std::string& mesh_name, int object_id,
         bool is_name_regex = false) override;
     virtual int getSegmentationObjectID(const std::string& mesh_name) override;
 
-    virtual msr::airlib::VehicleCameraBase* getCamera(unsigned int index = 0) override;
+    virtual msr::airlib::ImageCaptureBase* getImageCapture() override;
+
+    virtual void printLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0) override;
+    virtual Pose getActorPose(const std::string& actor_name) override;
+
 
 private:
     void detectUsbRc();
-    static float joyStickToRC(int16_t val);
-    const msr::airlib::RCData& getRCData();
+    const msr::airlib::RCData& getRCData();  
+    void resetPrivate();
 
 private:
     MultiRotor vehicle_;
@@ -72,7 +80,7 @@ private:
     VehiclePawnWrapper* vehicle_pawn_wrapper_;
 
     msr::airlib::MultiRotorParams* vehicle_params_;
-    std::unique_ptr<msr::airlib::DroneApi> controller_cancelable_;
+    std::unique_ptr<msr::airlib::MultirotorApi> controller_cancelable_;
     std::unique_ptr<msr::airlib::ControlServerBase> rpclib_server_;
 
     struct RotorInfo {
@@ -101,6 +109,11 @@ private:
         NonePending, RenderStatePending, RenderPending
     } pending_pose_status_;
     Pose pending_pose_; //force new pose through API
+
+    //reset must happen while World is locked so its async task initiated from API thread
+    bool reset_pending_;
+    std::packaged_task<void()> reset_task_;
+
     Pose last_pose_; //for trace lines showing vehicle path
     Pose last_debug_pose_; //for purposes such as comparing recorded trajectory
 };

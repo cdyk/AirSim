@@ -9,7 +9,7 @@
 #include "vehicles/multirotor/controllers/DroneControllerBase.hpp"
 #include "controllers/VehicleConnectorBase.hpp"
 #include "api/VehicleApiBase.hpp"
-#include "controllers/Waiter.hpp"
+#include "common/Waiter.hpp"
 #include <atomic>
 #include <thread>
 #include <memory>
@@ -31,10 +31,9 @@ namespace msr { namespace airlib {
 // here that only one operation is allowed at a time and that is what the CallLock object is for.  It cancels previous operation then
 // sets up the new operation.
 
-class DroneApi : public VehicleApiBase {
-
+class MultirotorApi : public VehicleApiBase {
 public:
-    DroneApi(VehicleConnectorBase* vehicle)
+    MultirotorApi(VehicleConnectorBase* vehicle)
         : vehicle_(vehicle)
     {
         controller_ = static_cast<DroneControllerBase*>(vehicle->getController());
@@ -43,7 +42,7 @@ public:
         //auto fence = std::make_shared<CubeGeoFence>(VectorMath::Vector3f(-1E10, -1E10, -1E10), VectorMath::Vector3f(1E10, 1E10, 1E10), vehicle_params.distance_accuracy);
         //auto safety_eval = std::make_shared<SafetyEval>(vehicle_params, fence);
     }
-    virtual ~DroneApi() = default;
+    virtual ~MultirotorApi() = default;
 
     bool armDisarm(bool arm)
     {
@@ -157,8 +156,19 @@ public:
         return enqueueCommand(cmd);
     }
 
-    //status getters
-    //TODO: add single call to get all of the state
+    /************************* State APIs *********************************/
+    MultirotorState getMultirotorState()
+    {
+        MultirotorState state;
+        state.kinematics_estimated = controller_->getKinematicsEstimated();
+        state.collision = controller_->getCollisionInfo();
+        state.kinematics_true = vehicle_->getTrueKinematics();
+        state.gps_location = controller_->getGpsLocation();
+        state.timestamp = controller_->clock()->nowNanos();
+
+        return state;
+    }
+
     Vector3r getPosition()
     {
         return controller_->getPosition();
@@ -167,6 +177,87 @@ public:
     Vector3r getVelocity()
     {
         return controller_->getVelocity();
+    }
+
+    Quaternionr getOrientation()
+    {
+        return controller_->getOrientation();
+    }
+
+    DroneControllerBase::LandedState getLandedState()
+    {
+        return controller_->getLandedState();
+    }
+
+    virtual CollisionInfo getCollisionInfo() override
+    {
+        return controller_->getCollisionInfo();
+    }
+
+    RCData getRCData()
+    {
+        return controller_->getRCData();
+    }
+
+    //TODO: add GPS health, accuracy in API
+    GeoPoint getGpsLocation()
+    {
+        return controller_->getGpsLocation();
+    }
+
+    bool isSimulationMode()
+    {
+        return controller_->isSimulationMode();
+    }
+
+    void getStatusMessages(std::vector<std::string>& messages)
+    {
+        controller_->getStatusMessages(messages);
+    }
+
+    virtual void cancelAllTasks()
+    {
+        offboard_thread_.cancel();
+    }
+
+
+    /******************* VehicleApiBase implementtaion ********************/
+    virtual GeoPoint getHomeGeoPoint() override
+    {
+        return controller_->getHomeGeoPoint();
+    }
+    virtual void enableApiControl(bool is_enabled) override
+    {
+        CallLock lock(controller_, action_mutex_, cancel_mutex_, pending_);
+        pending_ = std::make_shared<DirectCancelableBase>();
+        controller_->enableApiControl(is_enabled);
+    }
+
+    virtual vector<ImageCaptureBase::ImageResponse> simGetImages(const vector<ImageCaptureBase::ImageRequest>& requests) override
+    {
+        vector<ImageCaptureBase::ImageResponse> responses;
+        ImageCaptureBase* image_capture = vehicle_->getImageCapture();
+        image_capture->getImages(requests, responses);
+        return responses;
+    }
+    virtual vector<uint8_t> simGetImage(uint8_t camera_id, ImageCaptureBase::ImageType image_type) override
+    {
+        vector<ImageCaptureBase::ImageRequest> request = { ImageCaptureBase::ImageRequest(camera_id, image_type)};
+        const vector<ImageCaptureBase::ImageResponse>& response = simGetImages(request);
+        if (response.size() > 0)
+            return response.at(0).image_data_uint8;
+        else 
+            return vector<uint8_t>();
+    }
+
+    virtual void simPrintLogMessage(const std::string& message, const std::string& message_param, unsigned char severity) override
+    {
+        vehicle_->printLogMessage(message, message_param, severity);
+    }
+
+    virtual Pose simGetObjectPose(const std::string& actor_name) override
+    {
+        return vehicle_->getActorPose(actor_name);
     }
 
     virtual void simSetPose(const Pose& pose, bool ignore_collision) override
@@ -189,91 +280,8 @@ public:
         return vehicle_->getSegmentationObjectID(mesh_name);
     }
 
-    Quaternionr getOrientation()
-    {
-        return controller_->getOrientation();
-    }
-    DroneControllerBase::LandedState getLandedState()
-    {
-        return controller_->getLandedState();
-    }
 
-
-    virtual CollisionInfo getCollisionInfo() override
-    {
-        return controller_->getCollisionInfo();
-    }
-
-    RCData getRCData()
-    {
-        return controller_->getRCData();
-    }
-    TTimePoint timestampNow()
-    {
-        return controller_->clock()->nowNanos();
-    }
-
-    //TODO: add GPS health, accuracy in API
-    GeoPoint getGpsLocation()
-    {
-        return controller_->getGpsLocation();
-    }
-
-    bool isSimulationMode()
-    {
-        return controller_->isSimulationMode();
-    }
-    std::string getServerDebugInfo()
-    {
-        //for now this method just allows to see if server was started
-        return std::to_string(Utils::getUnixTimeStamp());
-    }
-
-    void getStatusMessages(std::vector<std::string>& messages)
-    {
-        controller_->getStatusMessages(messages);
-    }
-
-    virtual void cancelAllTasks()
-    {
-        offboard_thread_.cancel();
-    }
-
-    /******************* VehicleApiBase implementtaion ********************/
-    virtual GeoPoint getHomeGeoPoint() override
-    {
-        return controller_->getHomeGeoPoint();
-    }
-    virtual void enableApiControl(bool is_enabled) override
-    {
-        CallLock lock(controller_, action_mutex_, cancel_mutex_, pending_);
-        pending_ = std::make_shared<DirectCancelableBase>();
-        controller_->enableApiControl(is_enabled);
-    }
-
-    virtual vector<VehicleCameraBase::ImageResponse> simGetImages(const vector<VehicleCameraBase::ImageRequest>& request) override
-    {
-        vector<VehicleCameraBase::ImageResponse> response;
-
-        for (const auto& item : request) {
-            VehicleCameraBase* camera = vehicle_->getCamera(item.camera_id);
-            const auto& item_response = camera->getImage(item.image_type, item.pixels_as_float, item.compress);
-            response.push_back(item_response);
-        }
-
-        return response;
-    }
-    virtual vector<uint8_t> simGetImage(uint8_t camera_id, VehicleCameraBase::ImageType image_type) override
-    {
-        vector<VehicleCameraBase::ImageRequest> request = { VehicleCameraBase::ImageRequest(camera_id, image_type)};
-        const vector<VehicleCameraBase::ImageResponse>& response = simGetImages(request);
-        if (response.size() > 0)
-            return response.at(0).image_data_uint8;
-        else 
-            return vector<uint8_t>();
-    }
-
-    virtual bool isApiControlEnabled() override
+    virtual bool isApiControlEnabled() const override
     {
         return controller_->isApiControlEnabled();
     }
