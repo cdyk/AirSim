@@ -8,7 +8,6 @@
 #include "common/AirSimSettings.hpp"
 #include "NedTransform.h"
 
-
 VehiclePawnWrapper::VehiclePawnWrapper()
 {
     static ConstructorHelpers::FObjectFinder<UParticleSystem> collision_display(TEXT("ParticleSystem'/AirSim/StarterContent/Particles/P_Explosion.P_Explosion'"));
@@ -301,7 +300,6 @@ void VehiclePawnWrapper::setPose(const Pose& pose, bool ignore_collision)
     else if (!state_.tracing_enabled) {
         state_.last_position = position;
     }
-
 }
 
 void VehiclePawnWrapper::setDebugPose(const Pose& debug_pose)
