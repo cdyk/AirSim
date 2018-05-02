@@ -35,7 +35,8 @@ IF NOT EXIST external\rpclib\rpclib-2.2.1 (
 	ECHO Downloading rpclib
 	ECHO *****************************************************************************************
 	@echo on
-	powershell -command "& { iwr https://github.com/rpclib/rpclib/archive/v2.2.1.zip -OutFile external\rpclib.zip }"
+	REM powershell -command "& { iwr https://github.com/rpclib/rpclib/archive/v2.2.1.zip -OutFile external\rpclib.zip }"
+    powershell -command "& { iwr https://codeload.github.com/rpclib/rpclib/zip/v2.2.1 -OutFile external\rpclib.zip }"
 	@echo off
 	
 	REM //remove any previous versions
