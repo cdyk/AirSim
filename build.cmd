@@ -36,13 +36,13 @@ IF NOT EXIST external\rpclib\rpclib-2.2.1 (
 	ECHO *****************************************************************************************
 	@echo on
 	REM powershell -command "& { iwr https://github.com/rpclib/rpclib/archive/v2.2.1.zip -OutFile external\rpclib.zip }"
-    powershell -command "& { iwr https://codeload.github.com/rpclib/rpclib/zip/v2.2.1 -OutFile external\rpclib.zip }"
+    powershell -command "& { $global:ProgressPreference = 'SilentlyContinue'; iwr https://codeload.github.com/rpclib/rpclib/zip/v2.2.1 -OutFile external\rpclib.zip }"
 	@echo off
 	
 	REM //remove any previous versions
 	rmdir external\rpclib /q /s
 
-	powershell -command "& { Expand-Archive -Path external\rpclib.zip -DestinationPath external\rpclib }"
+	powershell -command "& { $global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -Path external\rpclib.zip -DestinationPath external\rpclib }"
 	del external\rpclib.zip /q
 	
 	REM //Don't fail the build if the high-poly car is unable to be downloaded
@@ -92,10 +92,10 @@ IF NOT EXIST Unreal\Plugins\AirSim\Content\VehicleAdv\SUV\v1.1.7 (
         @echo on
         REM powershell -command "& { Start-BitsTransfer -Source https://github.com/Microsoft/AirSim/releases/download/v1.1.7/car_assets.zip -Destination suv_download_tmp\car_assets.zip }"
         REM powershell -command "& { (New-Object System.Net.WebClient).DownloadFile('https://github.com/Microsoft/AirSim/releases/download/v1.1.7/car_assets.zip', 'suv_download_tmp\car_assets.zip') }"
-        powershell -command "& { iwr https://github.com/Microsoft/AirSim/releases/download/v1.1.7/car_assets.zip -OutFile suv_download_tmp\car_assets.zip }"
+        powershell -command "& { $global:ProgressPreference = 'SilentlyContinue'; iwr https://github.com/Microsoft/AirSim/releases/download/v1.1.7/car_assets.zip -OutFile suv_download_tmp\car_assets.zip }"
         @echo off
 		rmdir /S /Q Unreal\Plugins\AirSim\Content\VehicleAdv\SUV
-        powershell -command "& { Expand-Archive -Path suv_download_tmp\car_assets.zip -DestinationPath Unreal\Plugins\AirSim\Content\VehicleAdv }"
+        powershell -command "& { $global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -Path suv_download_tmp\car_assets.zip -DestinationPath Unreal\Plugins\AirSim\Content\VehicleAdv }"
         rmdir suv_download_tmp /q /s
         
         REM //Don't fail the build if the high-poly car is unable to be downloaded
@@ -109,8 +109,8 @@ IF NOT EXIST Unreal\Plugins\AirSim\Content\VehicleAdv\SUV\v1.1.7 (
 REM //---------- get Eigen library ----------
 IF NOT EXIST AirLib\deps mkdir AirLib\deps
 IF NOT EXIST AirLib\deps\eigen3 (
-    powershell -command "& { iwr http://bitbucket.org/eigen/eigen/get/3.3.2.zip -OutFile eigen3.zip }"
-    powershell -command "& { Expand-Archive -Path eigen3.zip -DestinationPath AirLib\deps }"
+    powershell -command "& { $global:ProgressPreference = 'SilentlyContinue'; iwr http://bitbucket.org/eigen/eigen/get/3.3.2.zip -OutFile eigen3.zip }"
+    powershell -command "& { $global:ProgressPreference = 'SilentlyContinue'; Expand-Archive -Path eigen3.zip -DestinationPath AirLib\deps }"
     move AirLib\deps\eigen* AirLib\deps\del_eigen
     mkdir AirLib\deps\eigen3
     move AirLib\deps\del_eigen\Eigen AirLib\deps\eigen3\Eigen
