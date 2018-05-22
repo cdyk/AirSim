@@ -172,6 +172,27 @@ struct GeoPoint {
     }
 };
 
+struct HomeGeoPoint {
+    GeoPoint home_point;
+    double lat_rad, lon_rad;
+    double cos_lat, sin_lat;
+
+    HomeGeoPoint()
+    {}
+    HomeGeoPoint(const GeoPoint& home_point_val)
+    {
+        initialize(home_point_val);
+    }
+    void initialize(const GeoPoint& home_point_val)
+    {
+        home_point = home_point_val;
+        lat_rad = Utils::degreesToRadians(home_point.latitude);
+        lon_rad = Utils::degreesToRadians(home_point.longitude);
+        cos_lat = cos(lat_rad);
+        sin_lat = sin(lat_rad);
+    }
+};
+
 struct CollisionInfo {
     bool has_collided = false;
     Vector3r normal = Vector3r::Zero();
@@ -194,6 +215,19 @@ struct CollisionInfo {
         impact_point(impact_point_val), position(position_val),
         penetration_depth(penetration_depth_val), time_stamp(time_stamp_val),
         object_name(object_name_val), object_id(object_id_val)
+    {
+    }
+};
+
+struct CameraInfo {
+    Pose pose;
+    float fov;
+
+    CameraInfo()
+    {}
+
+    CameraInfo(const Pose& pose_val, float fov_val)
+        : pose(pose_val), fov(fov_val)
     {
     }
 };

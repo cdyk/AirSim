@@ -15,7 +15,7 @@
 namespace msr { namespace airlib {
 
 float DroneControllerBase::getAutoLookahead(float velocity, float adaptive_lookahead,
-        float max_factor, float min_factor)
+        float max_factor, float min_factor) const
 {
     //if auto mode requested for lookahead then calculate based on velocity
     float command_period_dist = velocity * getCommandPeriod();
@@ -24,7 +24,7 @@ float DroneControllerBase::getAutoLookahead(float velocity, float adaptive_looka
     return lookahead;
 }
 
-float DroneControllerBase::getObsAvoidanceVelocity(float risk_dist, float max_obs_avoidance_vel)
+float DroneControllerBase::getObsAvoidanceVelocity(float risk_dist, float max_obs_avoidance_vel) const
 {
     unused(risk_dist);
     return max_obs_avoidance_vel;
@@ -46,7 +46,7 @@ void DroneControllerBase::loopCommandPost()
     //no-op by default. derived class can override it if needed
 }
 
-bool DroneControllerBase::moveByAngle(float pitch, float roll, float z, float yaw, float duration
+bool DroneControllerBase::moveByAngleZ(float pitch, float roll, float z, float yaw, float duration
     , CancelableBase& cancelable_action)
 {
     if (duration <= 0)
@@ -54,6 +54,17 @@ bool DroneControllerBase::moveByAngle(float pitch, float roll, float z, float ya
 
     return !waitForFunction([&]() {
         return !moveByRollPitchZ(pitch, roll, z, yaw);
+    }, duration, cancelable_action);
+}
+
+bool DroneControllerBase::moveByAngleThrottle(float pitch, float roll, float throttle, float yaw_rate, float duration
+    , CancelableBase& cancelable_action)
+{
+    if (duration <= 0)
+        return true;
+
+    return !waitForFunction([&]() {
+        return !moveByRollPitchThrottle(pitch, roll, throttle, yaw_rate);
     }, duration, cancelable_action);
 }
 
@@ -281,7 +292,7 @@ bool DroneControllerBase::moveToZ(float z, float velocity, const YawMode& yaw_mo
 
 bool DroneControllerBase::rotateToYaw(float yaw, float margin, CancelableBase& cancelable_action)
 {
-    YawMode yaw_mode(false, VectorMath::normalizeAngleDegrees(yaw));
+    YawMode yaw_mode(false, VectorMath::normalizeAngle(yaw));
     Waiter waiter(getCommandPeriod());
     auto start_pos = getPosition();
     bool is_yaw_reached;
@@ -374,6 +385,14 @@ bool DroneControllerBase::moveToPosition(const Vector3r& dest, const YawMode& ya
     return true;
 }
 
+bool DroneControllerBase::moveByRollPitchThrottle(float pitch, float roll, float throttle, float yaw_rate)
+{
+    if (safetyCheckVelocity(getVelocity()))
+        commandRollPitchThrottle(pitch, roll, throttle, yaw_rate);
+
+    return true;
+}
+
 bool DroneControllerBase::moveByRollPitchZ(float pitch, float roll, float z, float yaw)
 {
     if (safetyCheckVelocity(getVelocity()))
@@ -397,9 +416,47 @@ bool DroneControllerBase::setSafety(SafetyEval::SafetyViolationType enable_reaso
     return true;
 }
 
+
+RCData DroneControllerBase::estimateRCTrims(CancelableBase& cancelable_action, float trimduration, float minCountForTrim, float maxTrim)
+{
+    rc_data_trims_ = RCData();
+
+    //get trims
+    Waiter waiter_trim(getCommandPeriod(), trimduration);
+    uint count = 0;
+    do {
+
+        const RCData rc_data = getRCData();
+        if (rc_data.is_valid) {
+            rc_data_trims_.add(rc_data);
+            count++;
+        }
+
+    } while (waiter_trim.sleep(cancelable_action) && !waiter_trim.is_timeout());
+
+    rc_data_trims_.is_valid = true;
+
+
+    if (count < minCountForTrim) {
+        rc_data_trims_.is_valid = false;
+        Utils::log("Cannot compute RC trim because too few readings received");
+    }
+
+    //take average
+    rc_data_trims_.divideBy(static_cast<float>(count));
+    if (rc_data_trims_.isAnyMoreThan(maxTrim)) {
+        rc_data_trims_.is_valid = false;
+        Utils::log(Utils::stringf("RC trims does not seem to be valid: %s", rc_data_trims_.toString().c_str()));
+    }
+
+    Utils::log(Utils::stringf("RCData Trims: %s", rc_data_trims_.toString().c_str()));
+
+    return rc_data_trims_;
+}
+
 bool DroneControllerBase::moveByManual(float vx_max, float vy_max, float z_min, float duration, DrivetrainType drivetrain, const YawMode& yaw_mode, CancelableBase& cancelable_action)
 {
-    const float kMaxMessageAge = 0.1f /* 0.1 sec */, kTrimduration = 1, kMinCountForTrim = 10, kMaxTrim = 100, kMaxRCValue = 10000;
+    const float kMaxMessageAge = 0.1f /* 0.1 sec */, kMaxRCValue = 10000;
 
     if (duration <= 0)
         return true;
@@ -407,37 +464,14 @@ bool DroneControllerBase::moveByManual(float vx_max, float vy_max, float z_min, 
     //freeze the quaternion
     Quaternionr starting_quaternion = getOrientation();
 
-    //get trims
-    Waiter waiter_trim(getCommandPeriod(), kTrimduration);
-    RCData rc_data_trims;
-    uint count = 0;
-    do {
-
-        const RCData rc_data = getRCData();
-        if (rc_data.timestamp > 0) {
-            rc_data_trims.add(rc_data);
-            count++;
-        }
-
-    } while (waiter_trim.sleep(cancelable_action) && !waiter_trim.is_timeout());
-
-    if (count < kMinCountForTrim)
-        throw VehicleMoveException("Cannot compute RC trim because too few readings received");
-
-    //take average
-    rc_data_trims.divideBy(static_cast<float>(count));
-    if (rc_data_trims.isAnyMoreThan(kMaxTrim))
-        throw VehicleMoveException(Utils::stringf("RC trims does not seem to be valid: %s", rc_data_trims.toString().c_str()));
-
-    Utils::log(Utils::stringf("RCData Trims: %s", rc_data_trims.toString().c_str()));
-
     Waiter waiter(getCommandPeriod(), duration);
     do {
 
         RCData rc_data = getRCData();
         TTimeDelta age = clock()->elapsedSince(rc_data.timestamp);
-        if (age <= kMaxMessageAge) {
-            rc_data.subtract(rc_data_trims);
+        if (rc_data.is_valid && (rc_data.timestamp == 0 || age <= kMaxMessageAge)) { //if rc message timestamp is not set OR is not too old 
+            if (rc_data_trims_.is_valid)
+                rc_data.subtract(rc_data_trims_);
 
             //convert RC commands to velocity vector
             const Vector3r vel_word(rc_data.pitch * vy_max/kMaxRCValue, rc_data.roll  * vx_max/kMaxRCValue, 0);
@@ -465,14 +499,14 @@ bool DroneControllerBase::moveByManual(float vx_max, float vy_max, float z_min, 
     return waiter.is_timeout();
 }
 
-Vector2r DroneControllerBase::getPositionXY()
+Vector2r DroneControllerBase::getPositionXY() const
 {
     const Vector3r& cur_loc3 = getPosition();
     Vector2r cur_loc(cur_loc3.x(), cur_loc3.y());
     return cur_loc;
 }
 
-float DroneControllerBase::getZ()
+float DroneControllerBase::getZ() const
 {
     return getPosition().z();
 }
@@ -612,7 +646,7 @@ void DroneControllerBase::adjustYaw(const Vector3r& heading, DrivetrainType driv
     if (drivetrain == DrivetrainType::ForwardOnly && !yaw_mode.is_rate) {
         if (heading.norm() > getDistanceAccuracy()) {
             yaw_mode.yaw_or_rate = yaw_mode.yaw_or_rate + (std::atan2(heading.y(), heading.x()) * 180 / M_PIf);
-            yaw_mode.yaw_or_rate = VectorMath::normalizeAngleDegrees(yaw_mode.yaw_or_rate);
+            yaw_mode.yaw_or_rate = VectorMath::normalizeAngle(yaw_mode.yaw_or_rate);
         }
         else
             yaw_mode.setZeroRate(); //don't change existing yaw if heading is too small because that can generate random result
@@ -665,19 +699,19 @@ void DroneControllerBase::moveToPathPosition(const Vector3r& dest, float velocit
         moveByVelocity(velocity_vect.x(), velocity_vect.y(), velocity_vect.z(), yaw_mode);
 }
 
-bool DroneControllerBase::isYawWithinMargin(float yaw_target, float margin)
+bool DroneControllerBase::isYawWithinMargin(float yaw_target, float margin) const
 {
     const float yaw_current = VectorMath::getYaw(getOrientation()) * 180 / M_PIf;
     return std::abs(yaw_current - yaw_target) <= margin;
 }    
 
-Pose DroneControllerBase::getDebugPose()
+Pose DroneControllerBase::getDebugPose() const
 {
     //by default indicate that we don't have alternative pose info
     return Pose::nanPose();
 }
 
-CollisionInfo DroneControllerBase::getCollisionInfo()
+CollisionInfo DroneControllerBase::getCollisionInfo() const
 {
     return collision_info_;
 }

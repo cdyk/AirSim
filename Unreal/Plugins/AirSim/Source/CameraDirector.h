@@ -18,7 +18,9 @@ enum class ECameraDirectorMode : uint8
     CAMERA_DIRECTOR_MODE_FLY_WITH_ME = 3	UMETA(DisplayName = "FlyWithMe"),
     CAMERA_DIRECTOR_MODE_MANUAL = 4	UMETA(DisplayName = "Manual"),
     CAMERA_DIRECTOR_MODE_SPRINGARM_CHASE = 5	UMETA(DisplayName = "SpringArmChase"),
-    CAMREA_DIRECTOR_MODE_BACKUP = 6 UMETA(DisplayName = "Backup")
+    CAMERA_DIRECTOR_MODE_BACKUP = 6     UMETA(DisplayName = "Backup"),
+    CAMERA_DIRECTOR_MODE_NODISPLAY = 7      UMETA(DisplayName = "No Display"),
+	CAMERA_DIRECTOR_MODE_FRONT = 8	UMETA(DisplayName = "Front")
 };
 
 UCLASS()
@@ -38,6 +40,8 @@ public:
     void inputEventFlyWithView();
     void inputEventSpringArmChaseView();
     void inputEventBackupView();
+    void inputEventNoDisplayView();
+	void inputEventFrontView();
 
 public:
     ACameraDirector();
@@ -68,7 +72,7 @@ public:
 private:
     void setupInputBindings();
     void attachSpringArm(bool attach);
-    void disableNonExternalCameras();
+    void disableCameras(bool fpv, bool backup, bool external);
     void setupCameraFromSettings();
 
 
@@ -79,6 +83,7 @@ private:
     APIPCamera* fpv_camera_;
     APIPCamera* backup_camera_;
     APIPCamera* external_camera_;
+	APIPCamera* front_camera_;
     AActor* follow_actor_;
 
     USceneComponent* last_parent_ = nullptr;
@@ -94,4 +99,5 @@ private:
     bool camera_rotation_lag_enabled_;
     int fpv_camera_index_;
     int backup_camera_index_ = 4;
+	int front_camera_index_ = 0;
 };

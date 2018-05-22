@@ -20,10 +20,6 @@ public:
     //called when render changes are required
     virtual void updateRendering(float dt) = 0;
 
-    //opens up channel to talk to vehicle via APIs
-    virtual void startApiServer() = 0;
-    virtual void stopApiServer() = 0;
-    virtual bool isApiServerStarted() = 0;
     virtual VehicleControllerBase* getController() = 0;
     virtual ImageCaptureBase* getImageCapture() = 0;
     virtual void setPose(const Pose& pose, bool ignore_collision) = 0;
@@ -34,7 +30,8 @@ public:
     virtual void printLogMessage(const std::string& message, std::string message_param = "", unsigned char severity = 0) = 0;
     virtual Pose getActorPose(const std::string& actor_name) = 0;
     virtual Kinematics::State getTrueKinematics() = 0;
-
+    virtual CameraInfo getCameraInfo(int camera_id) const = 0;
+    virtual void setCameraOrientation(int camera_id, const Quaternionr& orientation) = 0;
 };
 
 

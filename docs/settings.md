@@ -42,8 +42,8 @@ Below are complete list of settings available along with their default values. I
     "RecordOnMove": false,
     "RecordInterval": 0.05,
     "Cameras": [
-		  { "CameraID": 0, "ImageType": 0, "PixelsAsFloat": false, "Compress": true }
-	  ]
+        { "CameraID": 0, "ImageType": 0, "PixelsAsFloat": false, "Compress": true }
+    ]
   },
   "CaptureSettings": [
     {
@@ -56,9 +56,49 @@ Below are complete list of settings available along with their default values. I
       "AutoExposureMaxBrightness": 0.64,
       "AutoExposureMinBrightness": 0.03,
       "MotionBlurAmount": 0,
-      "TargetGamma": 1.0
+      "TargetGamma": 1.0,
+      "ProjectionMode": "",
+      "OrthoWidth": 5.12,
+      "Gimble": {
+        "Stabilization": 0,
+        "Pitch": NaN,
+        "Roll": NaN,
+        "Yaw": NaN
+      }
     }
   ],
+  "OriginGeopoint": {
+    "Latitude": 47.641468,
+    "Latitude": -122.140165,
+    "Altitude": 122
+  },
+  "TimeOfDay": {
+    "Enabled": false,
+    "StartDateTime": "",
+    "CelestialClockSpeed": 1,
+    "StartDateTimeDst": false,
+    "UpdateIntervalSecs": 60
+  },
+  "SubWindows": [
+    {"WindowID": 0, "CameraID": 0, "ImageType": 3, "Visible": false},
+    {"WindowID": 1, "CameraID": 0, "ImageType": 5, "Visible": false},
+    {"WindowID": 2, "CameraID": 0, "ImageType": 0, "Visible": false}    
+  ],
+  "SimpleFlight": {
+    "FirmwareName": "SimpleFlight",
+    "DefaultVehicleState": "Armed",
+    "RC": {
+      "RemoteControlID": 0,
+      "AllowAPIWhenDisconnected": false,
+      "AllowAPIAlways": true
+    },
+    "ApiServerPort": 41451
+  },
+  "SegmentationSettings": {
+    "InitMethod": "",
+    "MeshNamingMethod": "",
+    "OverrideExisting": false
+  },
   "NoiseSettings": [
     {
       "Enabled": false,
@@ -82,20 +122,12 @@ Below are complete list of settings available along with their default values. I
       "HorzDistortionStrength": 0.002
     }
   ],
-  "SubWindows": [
-    {"WindowID": 0, "CameraID": 0, "ImageType": 3, "Visible": false},
-    {"WindowID": 1, "CameraID": 0, "ImageType": 5, "Visible": false},
-    {"WindowID": 2, "CameraID": 0, "ImageType": 0, "Visible": false}    
+  "AdditionalCameras": [
+    { "X": 0.00, "Y": 0.5, "Z": 0.0, "Roll": 0.0, "Pitch": 0.0, "Yaw": 90.0 }
   ],
-  "SimpleFlight": {
-    "FirmwareName": "SimpleFlight",
-    "DefaultVehicleState": "Armed",
-    "RC": {
-      "RemoteControlID": 0,
-      "AllowAPIWhenDisconnected": false,
-      "AllowAPIAlways": true
-    },
-    "ApiServerPort": 41451
+  "PawnPaths": {
+    "DefaultCar": {"PawnBP":"/AirSim/VehicleAdv/SUV/SuvCarPawn"},
+    "DefaultQuadrotor": {"PawnBP":"/AirSim/Blueprints/BP_FlyingPawn"}
   },
   "PX4": {
     "FirmwareName": "PX4",
@@ -122,22 +154,19 @@ Below are complete list of settings available along with their default values. I
 ````
 
 ## Image Capture Settings
-The `CaptureSettings` determines how different image types such as scene, depth, disparity, surface normals and segmentation views are rendered. The Width, Height and FOV settings should be self explanatory. The AutoExposureSpeed decides how fast eye adaptation works. We set to generally high value such as 100 to avoid artifacts in image capture. Simplarly we set MotionBlurAmount to 0 by default to avoid artifacts in groung truth images. For explanation of other settings, please see [this article](https://docs.unrealengine.com/latest/INT/Engine/Rendering/PostProcessEffects/AutomaticExposure/). 
+The `CaptureSettings` determines how different image types such as scene, depth, disparity, surface normals and segmentation views are rendered. The Width, Height and FOV settings should be self explanatory. The AutoExposureSpeed decides how fast eye adaptation works. We set to generally high value such as 100 to avoid artifacts in image capture. Simplarly we set MotionBlurAmount to 0 by default to avoid artifacts in groung truth images. The `ProjectionMode` decides the projection used by the capture camera and can take value "perspective" (default) or "orthographic". If projection mode is "orthographic" then `OrthoWidth` determines width of projected area captured in meters.
+
+For explanation of other settings, please see [this article](https://docs.unrealengine.com/latest/INT/Engine/Rendering/PostProcessEffects/AutomaticExposure/). 
 
 The `ImageType` element determines which image type the settings applies to. The valid values are described in [ImageType section](image_apis.md#available-imagetype). In addition, we also support special value `ImageType: -1` to apply the settings to external camera (i.e. what you are looking at on the screen).
+
+### Gimble
+The `Gimble` element allows to freeze camera orientation for pitch, roll and/or yaw. This setting is ignored unless `ImageType` is -1. The `Stabilization` is defaulted to 0 meaning no gimble i.e. camera orientation changes with body orientation on all axis. The value of 1 means full stabilization. The value between 0 to 1 acts as a weight for fixed angles specified (in degrees, in world-frame) in `Pitch`, `Roll` and `Yaw` elements and orientation of the vehicle body. When any of the angles is ommitted from json or set to NaN, that angle is not stabilized (i.e. it moves along with vehicle body).
 
 Note that `CaptureSettings` element is json array so you can add settings for multiple image types easily.
 
 ## Changing Flight Controller
 The `DefaultVehicleConfig` decides which config settings will be used for your vehicles. By default we use [simple_flight](simple_flight.md) so you don't have to do separate HITL or SITL setups. We also support ["PX4"](px4_setup.md) for advanced users.
-
-## LocalHostIp Setting
-Now when connecting to remote machines you may need to pick a specific ethernet adapter to reach those machines, for example, it might be
-over ethernet or over wifi, or some other special virtual adapter or a VPN.  Your PC may have multiple networks, and those networks might not
-be allowed to talk to each other, in which case the UDP messages from one network will not get through to the others.
-
-So the LocalHostIp allows you to configure how you are reaching those machines.  The default of 127.0.0.1 is not able to reach external machines, 
-this default is only used when everything you are talking to is contained on a single PC.
 
 ## PX4 and MavLink Related Settings
 These settings define the Mavlink SystemId and ComponentId for the Simulator (SimSysID, SimCompID), and for an optional external renderer (ExtRendererSysID, ExtRendererCompID)
@@ -165,9 +194,19 @@ The ViewMode determines how you will view the vehicle. For multirotors, the defa
 * Fpv: View the scene from front camera of vehicle
 * Manual: Don't move camera automatically. Use arrow keys and ASWD keys for move camera manually.
 * SpringArmChase: Chase the vehicle with camera mounted on (invisible) arm that is attached to the vehicle via spring (so it has some latency in movement).
+* NoDisplay: This will freeze rendering for main screen however rendering for subwindows, recording and APIs remain active. This mode is useful to save resources in "headless" mode where you are only interested in getting images and don't care about what gets rendered on main screen. This may also improve FPS for recording images.
+
+### TimeOfDay
+This section of settings controls the position of Sun in the environment. By default `Enabled` is false which means Sun's position is left at whatever was the default in the environment and it doesn't change over the time. If `Enabled` is true then Sun position is computed using longitude, latitude and altitude specified in `OriginGeopoint` section for the date specified in `StartDateTime` in the string format as `%Y-%m-%d %H:%M:%S`, for example, `2018-02-12 15:20:00`. If this string is empty then current date and time is used. If `StartDateTimeDst` is true then we adjust for day light savings time. The Sun's position is then contibuously updated at the interval specified in `UpdateIntervalSecs`. In some cases, it might be desirable to have celestial clock run faster or slower than simulation clock. This can be specified using `CelestialClockSpeed`, for example, value 100 means for every 1 second of simulation clock, Sun's position is advanced by 100 seconds so Sun will move in sky much faster.
+
+### OriginGeopoint
+This specifies the latitude, longitude and altitude of the coordinates (0, 0, 0) in Unreal Units in the Unreal Engine environment. The vehicle's home point is computed using this transformation. Note that all coordinates exposed via APIs are using NED system in SI units which means each vehicle starts at (0, 0, 0) in NED system. Time of Day settings are computed at (0, 0, 0) coordinates in Unreal Engine environment. This means that Sun position is computed for geographical coordinates specified in `OriginGeopoint` and time specified in `TimeOfDay` section in settings.json.
 
 ### EngineSound
 To turn off the engine sound use [setting](settings.md) `"EngineSound": false`. Currently this setting applies only to car.
+
+### PawnPaths
+This allows you to specify your own vehicle pawn blueprints, for example, you can replace the default car in AirSim with your own car. Your vehicle BP can reside in Content folder of your own Unreal project (i.e. outside of AirSim plugin folder). For example, if you have a car BP located in file `Content\MyCar\MySedanBP.uasset` in your project then you can set `"DefaultCar": {"PawnBP":"Class'/Game/MyCar/MySedanBP.MySedanBP_C'"}`. The `XYZ.XYZ_C` is a special notation required to specify class for BP `XYZ`. Please note that your BP must be derived from CarPawn class. By default this is not the case but you can re-parent the BP using the "Class Settings" button in toolbar in UE editor after you open the BP and then chosing "Car Pawn" for Parent Class settings in Class Options. It's also a good idea to disable "Auto Possess Player" and "Auto Possess AI" as well as set AI Controller Class to None in BP details. Please make sure your asset is included for cooking in packaging options if you are creating binary.
 
 ### SubWindows
 This setting determines what is shown in each of 3 subwindows which are visible when you press 0 key. The WindowsID can be 0 to 2, CameraID is integer identifying camera number on the vehicle. ImageType integer value determines what kind of image gets shown according to [ImageType enum](image_apis.md#available-imagetype). For example, for car vehicles below shows driver view, front bumper view and rear view as scene, depth ans surface normals respectively.
@@ -187,6 +226,21 @@ The recording feature allows you to record data such as position, orientation, v
 
 ### ClockSpeed
 Determines the speed of simulation clock with respect to wall clock. For example, value of 5.0 would mean simulation clock has 5 seconds elapsed when wall clock has 1 second elapsed (i.e. simulation is running faster). The value of 0.1 means that simulation clock is 10X slower than wall clock. The value of 1 means simulation is running in real time. It is important to realize that quality of simuation may decrease as the simulation clock runs faster. You might see artifacts like object moving past obstacles because collison is not detected. However slowing down simulation clock (i.e. values < 1.0) generally improves the quality of simulation.
+
+### Segmentation Settings
+The `InitMethod` determines how object IDs are initialized at startup to generate [segmentation](image_apis.md#segmentation). The value "" or "CommonObjectsRandomIDs" (default) means assign random IDs to each object at startup. This will generate segmentation view with random colors assign to each object. The value "None" means don't initialize object IDs. This will cause segmentation view to have single solid colors. This mode is useful if you plan to set up object IDs using [APIs](image_apis.md#segmentation) and it can save lot of delay at startup for large environments like CityEnviron.
+
+ If `OverrideExisting` is false then initializtion does not alter non-zero object IDs already assigned otherwise it does.
+
+ If `MeshNamingMethod` is "" or "OwnerName" then we use mesh's owner name to generate random hash as object IDs. If its "StaticMeshName" then we use static mesh's name to generate random hash as object IDs. Note that it is not possible to tell individual instances of the same static mesh apart this way, but the names are often more intuitive.
+
+### LocalHostIp Setting
+Now when connecting to remote machines you may need to pick a specific ethernet adapter to reach those machines, for example, it might be
+over ethernet or over wifi, or some other special virtual adapter or a VPN.  Your PC may have multiple networks, and those networks might not
+be allowed to talk to each other, in which case the UDP messages from one network will not get through to the others.
+
+So the LocalHostIp allows you to configure how you are reaching those machines.  The default of 127.0.0.1 is not able to reach external machines, 
+this default is only used when everything you are talking to is contained on a single PC.
 
 ### Image Noise Settings
 The `NoiseSettings` allows to add noise to the specified image type with a goal of simulating camera sensor noise, interference and other artifacts. By default no noise is added, i.e., `Enabled: false`. If you set `Enabled: true` then following different types of noise and interference artifacts are enabled, each can be further tuned using setting. The noise effects are implemented as shader created as post processing material in Unreal Engine called [CameraSensorNoise](https://github.com/Microsoft/AirSim/blob/master/Unreal/Plugins/AirSim/Content/HUDAssets/CameraSensorNoise.uasset).
@@ -219,3 +273,10 @@ This adds regions of noise on horizontal lines.
 This adds fluctuations on horizontal line.
 * `HorzDistortionContrib`: This determines blend ratio of noise pixel with image pixel, 0 means no noise and 1 means only noise.
 * `HorzDistortionStrength`: This determines how large is the distortion.
+
+### Additional Camera Settings
+This allows to configure cameras in addition to the [standard ones](image_apis.md#available-cameras). This is only implemented in the multirotor drone at the moment.
+The X, Y and Z fields specify the location of the new camera in the body frame, where X points forward, Y points to the right, and Z points downwards, and the values are given
+in SI units (meters). Yaw, Pitch, and Roll specify the orientation of the camera, where Yaw denotes rotation around the Z axis, Pitch rotation around the Y axis and Roll rotation around the X axis.
+
+This particular example adds a camera that is mounted on the right side of the drone, pointed to the right. The camera indices of the additional cameras are subsequent to the default ones, so camera index 5 is the first additional camera, camera index 6 the second additional camera, and so on.

@@ -18,12 +18,12 @@ class MultirotorRpcLibClient : public RpcLibClientBase {
 public:
     MultirotorRpcLibClient(const string& ip_address = "localhost", uint16_t port = 41451, uint timeout_ms = 60000);
 
-    bool armDisarm(bool arm);
     void setSimulationMode(bool is_set);
     bool takeoff(float max_wait_ms = 15);
     bool land(float max_wait_seconds = 60);
     bool goHome();
-    bool moveByAngle(float pitch, float roll, float z, float yaw, float duration);
+    bool moveByAngleZ(float pitch, float roll, float z, float yaw, float duration);
+    bool moveByAngleThrottle(float pitch, float roll, float throttle, float yaw_rate, float duration);
 
     bool moveByVelocity(float vx, float vy, float vz, float duration, 
         DrivetrainType drivetrain = DrivetrainType::MaxDegreeOfFreedom, const YawMode& yaw_mode = YawMode());
@@ -45,10 +45,12 @@ public:
     Vector3r getPosition();
     Vector3r getVelocity();
     Quaternionr getOrientation();
-    RCData getRCData();
     GeoPoint getGpsLocation();
     bool isSimulationMode();
     std::string getDebugInfo();
+
+    RCData getRCData();
+    void setRCData(const RCData& rc_data);
 
     DroneControllerBase::LandedState getLandedState();
 

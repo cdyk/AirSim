@@ -36,6 +36,7 @@ class AirSimImageType:
     DisparityNormalized = 4
     Segmentation = 5
     SurfaceNormals = 6
+    Infrared = 7
 
 class DrivetrainType:
     MaxDegreeOfFreedom = 0
@@ -99,6 +100,31 @@ class YawMode(MsgpackMixin):
         self.is_rate = is_rate
         self.yaw_or_rate = yaw_or_rate
 
+class RCData(MsgpackMixin):
+    timestamp = 0
+    pitch, roll, throttle, yaw = (0.0,)*4 #init 4 variable to to 0.0
+    switch1, switch2, switch3, switch4 = (0,)*4
+    switch5, switch6, switch7, switch8 = (0,)*4
+    is_initialized = False
+    is_valid = False
+    def __init__(self, timestamp = 0, pitch = 0.0, roll = 0.0, throttle = 0.0, yaw = 0.0, switch1 = 0,
+                 switch2 = 0, switch3 = 0, switch4 = 0, switch5 = 0, switch6 = 0, switch7 = 0, switch8 = 0, is_initialized = False, is_valid = False):
+        self.timestamp = timestamp
+        self.pitch = pitch 
+        self.roll = roll
+        self.throttle = throttle 
+        self.yaw = yaw 
+        self.switch1 = switch1 
+        self.switch2 = switch2 
+        self.switch3 = switch3 
+        self.switch4 = switch4 
+        self.switch5 = switch5
+        self.switch6 = switch6 
+        self.switch7 = switch7 
+        self.switch8 = switch8 
+        self.is_initialized = is_initialized
+        self.is_valid = is_valid
+
 class ImageRequest(MsgpackMixin):
     camera_id = np.uint8(0)
     image_type = AirSimImageType.Scene
@@ -134,6 +160,17 @@ class CarControls(MsgpackMixin):
     manual_gear = 0
     gear_immediate = True
 
+    def __init__(self, throttle = 0, steering = 0, brake = 0, 
+        handbrake = False, is_manual_gear = False, manual_gear = 0, gear_immediate = True):
+        self.throttle = throttle
+        self.steering = steering
+        self.brake = brake
+        self.handbrake = handbrake
+        self.is_manual_gear = is_manual_gear
+        self.manual_gear = manual_gear
+        self.gear_immediate = gear_immediate
+
+
     def set_throttle(self, throttle_val, forward):
         if (forward):
             is_manual_gear = False
@@ -155,6 +192,9 @@ class KinematicsState(MsgpackMixin):
 class CarState(MsgpackMixin):
     speed = np.float32(0)
     gear = 0
+    rpm = np.float32(0)
+    maxrpm = np.float32(0)
+    handbrake = False
     collision = CollisionInfo();
     kinematics_true = KinematicsState()
     timestamp = np.uint64(0)
@@ -166,66 +206,14 @@ class MultirotorState(MsgpackMixin):
     gps_location = GeoPoint()
     timestamp = np.uint64(0)
 
+class CameraInfo(MsgpackMixin):
+    pose = Pose()
+    fov = -1
+
 class AirSimClientBase:
-    def __init__(self, ip, port):
-        self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = 3600, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
+    def __init__(self, ip, port, timeout_value = 3600):
+        self.client = msgpackrpc.Client(msgpackrpc.Address(ip, port), timeout = timeout_value, pack_encoding = 'utf-8', unpack_encoding = 'utf-8')
         
-    def ping(self):
-        return self.client.call('ping')
-    
-    def reset(self):
-        self.client.call('reset')
-
-    def confirmConnection(self):
-        print('Waiting for connection: ', end='')
-        home = self.getHomeGeoPoint()
-        while ((home.latitude == 0 and home.longitude == 0 and home.altitude == 0) or
-                math.isnan(home.latitude) or  math.isnan(home.longitude) or  math.isnan(home.altitude)):
-            time.sleep(1)
-            home = self.getHomeGeoPoint()
-            print('X', end='')
-        print('')
-
-    def getHomeGeoPoint(self):
-        return GeoPoint.from_msgpack(self.client.call('getHomeGeoPoint'))
-
-    # basic flight control
-    def enableApiControl(self, is_enabled):
-        return self.client.call('enableApiControl', is_enabled)
-    def isApiControlEnabled(self):
-        return self.client.call('isApiControlEnabled')
-
-    def simSetSegmentationObjectID(self, mesh_name, object_id, is_name_regex = False):
-        return self.client.call('simSetSegmentationObjectID', mesh_name, object_id, is_name_regex)
-    def simGetSegmentationObjectID(self, mesh_name):
-        return self.client.call('simGetSegmentationObjectID', mesh_name)
-    def simPrintLogMessage(self, message, message_param = "", severity = 0):
-        return self.client.call('simPrintLogMessage', message, message_param, severity)
-    def simGetObjectPose(self, object_name):
-        pose = self.client.call('simGetObjectPose', object_name)
-        return Pose.from_msgpack(pose)
-
-
-    # camera control
-    # simGetImage returns compressed png in array of bytes
-    # image_type uses one of the AirSimImageType members
-    def simGetImage(self, camera_id, image_type):
-        # because this method returns std::vector<uint8>, msgpack decides to encode it as a string unfortunately.
-        result = self.client.call('simGetImage', camera_id, image_type)
-        if (result == "" or result == "\0"):
-            return None
-        return result
-
-    # camera control
-    # simGetImage returns compressed png in array of bytes
-    # image_type uses one of the AirSimImageType members
-    def simGetImages(self, requests):
-        responses_raw = self.client.call('simGetImages', requests)
-        return [ImageResponse.from_msgpack(response_raw) for response_raw in responses_raw]
-
-    def getCollisionInfo(self):
-        return CollisionInfo.from_msgpack(self.client.call('getCollisionInfo'))
-
     @staticmethod
     def stringToUint8Array(bstr):
         return np.fromstring(bstr, np.uint8)
@@ -448,16 +436,83 @@ class AirSimClientBase:
 
         AirSimClientBase.write_file(filename, png_bytes)
 
+    def ping(self):
+        return self.client.call('ping')
+    
+    def reset(self):
+        self.client.call('reset')
 
-# -----------------------------------  Multirotor APIs ---------------------------------------------
-class MultirotorClient(AirSimClientBase, object):
-    def __init__(self, ip = ""):
-        if (ip == ""):
-            ip = "127.0.0.1"
-        super(MultirotorClient, self).__init__(ip, 41451)
+    def confirmConnection(self):
+        home = self.getHomeGeoPoint()
+        while ((home.latitude == 0 and home.longitude == 0 and home.altitude == 0) or
+                math.isnan(home.latitude) or  math.isnan(home.longitude) or  math.isnan(home.altitude)):
+            time.sleep(1)
+            home = self.getHomeGeoPoint()
+            print('X', end='')
+        print('')
+
+    def getHomeGeoPoint(self):
+        return GeoPoint.from_msgpack(self.client.call('getHomeGeoPoint'))
 
     def armDisarm(self, arm):
         return self.client.call('armDisarm', arm)
+
+    # basic flight control
+    def enableApiControl(self, is_enabled):
+        return self.client.call('enableApiControl', is_enabled)
+    def isApiControlEnabled(self):
+        return self.client.call('isApiControlEnabled')
+
+    def simSetSegmentationObjectID(self, mesh_name, object_id, is_name_regex = False):
+        return self.client.call('simSetSegmentationObjectID', mesh_name, object_id, is_name_regex)
+    def simGetSegmentationObjectID(self, mesh_name):
+        return self.client.call('simGetSegmentationObjectID', mesh_name)
+    def simPrintLogMessage(self, message, message_param = "", severity = 0):
+        return self.client.call('simPrintLogMessage', message, message_param, severity)
+    def simGetObjectPose(self, object_name):
+        pose = self.client.call('simGetObjectPose', object_name)
+        return Pose.from_msgpack(pose)
+
+
+    # camera control
+    # simGetImage returns compressed png in array of bytes
+    # image_type uses one of the AirSimImageType members
+    def simGetImage(self, camera_id, image_type):
+        # because this method returns std::vector<uint8>, msgpack decides to encode it as a string unfortunately.
+        result = self.client.call('simGetImage', camera_id, image_type)
+        if (result == "" or result == "\0"):
+            return None
+        return result
+
+    # camera control
+    # simGetImage returns compressed png in array of bytes
+    # image_type uses one of the AirSimImageType members
+    def simGetImages(self, requests):
+        responses_raw = self.client.call('simGetImages', requests)
+        return [ImageResponse.from_msgpack(response_raw) for response_raw in responses_raw]
+
+    def getCollisionInfo(self):
+        return CollisionInfo.from_msgpack(self.client.call('getCollisionInfo'))
+
+    def getCameraInfo(self, camera_id):
+        return CameraInfo.from_msgpack(self.client.call('getCameraInfo', camera_id))
+
+    def setCameraOrientation(self, camera_id, orientation):
+        self.client.call('setCameraOrientation', camera_id, orientation)
+
+    def simIsPause(self):
+        return self.client.call("simIsPaused")
+    def simPause(self, is_paused):
+        self.client.call('simPause', is_paused)
+    def simContinueForTime(self, seconds):
+        self.client.call('simContinueForTime', seconds)
+
+# -----------------------------------  Multirotor APIs ---------------------------------------------
+class MultirotorClient(AirSimClientBase, object):
+    def __init__(self, ip = "", timeout = 3600):
+        if (ip == ""):
+            ip = "127.0.0.1"
+        super(MultirotorClient, self).__init__(ip, 41451, timeout_value = timeout)
 
     def takeoff(self, max_wait_seconds = 15):
         return self.client.call('takeoff', max_wait_seconds)
@@ -473,8 +528,9 @@ class MultirotorClient(AirSimClientBase, object):
 
         
     # query vehicle state
-    def getMultirotorState(self) -> MultirotorState:
+    def getMultirotorState(self):
         return MultirotorState.from_msgpack(self.client.call('getMultirotorState'))
+    getMultirotorState.__annotations__ = {'return': MultirotorState}
     def getPosition(self):
         return Vector3r.from_msgpack(self.client.call('getPosition'))
     def getVelocity(self):
@@ -488,8 +544,8 @@ class MultirotorClient(AirSimClientBase, object):
     def getPitchRollYaw(self):
         return self.toEulerianAngle(self.getOrientation())
 
-    #def getRCData(self):
-    #    return self.client.call('getRCData')
+    def getRCData(self):
+        return self.client.call('getRCData')
     def timestampNow(self):
         return self.client.call('timestampNow')
     def isApiControlEnabled(self):
@@ -501,8 +557,11 @@ class MultirotorClient(AirSimClientBase, object):
 
 
     # APIs for control
-    def moveByAngle(self, pitch, roll, z, yaw, duration):
-        return self.client.call('moveByAngle', pitch, roll, z, yaw, duration)
+    def moveByAngleZ(self, pitch, roll, z, yaw, duration):
+        return self.client.call('moveByAngleZ', pitch, roll, z, yaw, duration)
+
+    def moveByAngleThrottle(self, pitch, roll, throttle, yaw_rate, duration):
+        return self.client.call('moveByAngleThrottle', pitch, roll, throttle, yaw_rate, duration)
 
     def moveByVelocity(self, vx, vy, vz, duration, drivetrain = DrivetrainType.MaxDegreeOfFreedom, yaw_mode = YawMode()):
         return self.client.call('moveByVelocity', vx, vy, vz, duration, drivetrain, yaw_mode)
@@ -541,12 +600,15 @@ class MultirotorClient(AirSimClientBase, object):
     def rotateByYawRate(self, yaw_rate, duration):
         return self.client.call('rotateByYawRate', yaw_rate, duration)
 
+    def setRCData(self, rcdata = RCData()):
+        return self.client.call('setRCData', rcdata)
+
 # -----------------------------------  Car APIs ---------------------------------------------
 class CarClient(AirSimClientBase, object):
-    def __init__(self, ip = ""):
+    def __init__(self, ip = "", timeout = 3600):
         if (ip == ""):
             ip = "127.0.0.1"
-        super(CarClient, self).__init__(ip, 42451)
+        super(CarClient, self).__init__(ip, 42451, timeout_value = timeout)
 
     def setCarControls(self, controls):
         self.client.call('setCarControls', controls)

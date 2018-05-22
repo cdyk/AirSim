@@ -26,19 +26,6 @@ public:
         unused(dt);
     }
 
-    virtual void startApiServer() override
-    {
-    }
-
-    virtual void stopApiServer() override
-    {
-    }
-
-    virtual bool isApiServerStarted() override
-    {
-        return false;
-    }
-
     virtual VehicleControllerBase* getController() override
     {
         return controller_;
@@ -94,6 +81,19 @@ public:
         return msr::airlib::Pose();
     }
 
+    virtual CameraInfo getCameraInfo(int camera_id) const override
+    {
+        unused(camera_id);
+        throw std::logic_error("getCameraInfo() call is not implemented for this vehicle");
+    }
+
+    virtual void setCameraOrientation(int camera_id, const Quaternionr& orientation) override
+    {
+        unused(camera_id);
+        unused(orientation);
+
+        throw std::logic_error("setCameraOrientation() call is not implemented for this vehicle");
+    }
 
 private:
     VehicleControllerBase* controller_;

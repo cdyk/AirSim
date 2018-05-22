@@ -1,6 +1,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameFramework/Pawn.h"
+
 #include <vector>
 #include <memory>
 #include "UnrealImageCapture.h"
@@ -8,7 +10,9 @@
 #include "common/CommonStructs.hpp"
 #include "PIPCamera.h"
 #include "physics/Kinematics.hpp"
-#include "GameFramework/Pawn.h"
+#include "NedTransform.h"
+#include "api/VehicleApiBase.hpp"
+
 
 class VehiclePawnWrapper
 {
@@ -28,9 +32,6 @@ public:
         std::string vehicle_config_name;
         bool enable_collisions; 
         bool enable_passthrough_on_collisions; 
-        float home_lattitude;
-        float home_longitude;
-        float home_altitude;
         bool enable_trace;
 
         WrapperConfig() :
@@ -38,9 +39,6 @@ public:
             vehicle_config_name(""), //use the default config name
             enable_collisions(true),
             enable_passthrough_on_collisions(false),
-            home_lattitude(47.641468),
-            home_longitude(-122.140165),
-            home_altitude(122),
             enable_trace(false)
         {
         }
@@ -56,6 +54,7 @@ public: //interface
     void onCollision(class UPrimitiveComponent* MyComp, class AActor* Other, class UPrimitiveComponent* OtherComp, 
         bool bSelfMoved, FVector HitLocation, FVector HitNormal, FVector NormalImpulse, const FHitResult& Hit);
 
+    const APIPCamera* getCamera(int index = 0) const;
     APIPCamera* getCamera(int index = 0);
     UnrealImageCapture* getImageCapture();
     int getCameraCount();
@@ -67,8 +66,6 @@ public: //interface
     Pose getPose() const;
     void setPose(const Pose& pose, bool ignore_collision);
     void setDebugPose(const Pose& debug_pose);
-    FVector getPosition() const;
-    FRotator getOrientation() const;
 
     void setKinematics(const msr::airlib::Kinematics::State* kinematics);
     const msr::airlib::Kinematics::State* getTrueKinematics();
@@ -80,15 +77,28 @@ public: //interface
     std::string getLogLine();
 
     void printLogMessage(const std::string& message, const std::string& message_param = "", unsigned char severity = 0);
+    msr::airlib::CameraInfo getCameraInfo(int camera_id) const;
+    void setCameraOrientation(int camera_id, const Quaternionr& orientation);
 
     WrapperConfig& getConfig();
     const WrapperConfig& getConfig() const;
 
-    static VehiclePawnWrapper::Pose toPose(const FVector& u_position, const FQuat& u_quat);
     msr::airlib::Pose getActorPose(std::string actor_name);
     std::string getVehicleConfigName() const;
 
     int getRemoteControlID() const;
+
+    FVector getUUPosition() const;
+    FRotator getUUOrientation() const;
+
+    const NedTransform& getNedTransform() const;
+
+    void getRawVehicleSettings(msr::airlib::Settings& settings) const;
+
+    void possess();
+
+    msr::airlib::VehicleApiBase* getApi() const;
+    void setApi(std::unique_ptr<msr::airlib::VehicleApiBase> api);
 
 protected:
     UPROPERTY(VisibleAnywhere)
@@ -102,6 +112,7 @@ private: //methods
 
     //these methods are for future usage
     void plot(std::istream& s, FColor color, const Vector3r& offset);
+    VehiclePawnWrapper::Pose toPose(const FVector& u_position, const FQuat& u_quat) const;
 
 
 private: //vars
@@ -114,6 +125,8 @@ private: //vars
     const msr::airlib::Kinematics::State* kinematics_;
     std::string log_line_;
     WrapperConfig config_;
+    NedTransform ned_transform_;
+    std::unique_ptr<msr::airlib::VehicleApiBase> api_;
 
     struct State {
         FVector start_location;
