@@ -44,12 +44,12 @@ namespace common_utils { namespace type_utils {
 
             template <typename C> static no & f(...);
 
-            template <typename C>
+            template <typename D>
             static yes & g(typename std::enable_if<
-                std::is_same<decltype(static_cast<typename C::const_iterator(C::*)() const>(&C::end)),
-                             typename C::const_iterator(C::*)() const>::value, void>::type*);
+                std::is_same<decltype(static_cast<typename D::const_iterator(D::*)() const>(&D::end)),
+                             typename D::const_iterator(D::*)() const>::value, void>::type*);
 
-            template <typename C> static no & g(...);
+            template <typename D> static no & g(...);
 
         public:
             static bool const beg_value = sizeof(f<T>(nullptr)) == sizeof(yes);
